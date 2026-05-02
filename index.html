@@ -3267,17 +3267,42 @@ var ORIGIN_META={
 };
 
 function getOriginData(){
-  // Build map: origin -> {shots:[], avgScore, bestScore}
+  // Build map: origin -> {shots:[], avg, count, best}
+  // Handles: single origins, comma-separated, slash-separated blends
   var map={};
-  shots.forEach(function(s){
-    if(!s.origin||s.origin==='Blend'||!s.origin.trim())return;
-    // Normalize: take first word if multi-word unfamiliar origin
-    var o=s.origin.trim();
+
+  function addToMap(origin, shot){
+    var o=origin.trim();
+    if(!o||o.toLowerCase()==='blend'||o.toLowerCase()==='blends'||o.length<2)return;
+    // Capitalize first letter
+    o=o.charAt(0).toUpperCase()+o.slice(1);
     if(!map[o])map[o]={shots:[],total:0,best:0,name:o};
-    map[o].shots.push(s);
-    map[o].total+=s.overall;
-    if(s.overall>map[o].best)map[o].best=s.overall;
+    // Avoid duplicate shots for same origin (blends add same shot multiple times)
+    var already=map[o].shots.some(function(x){return x.id===shot.id;});
+    if(!already){
+      map[o].shots.push(shot);
+      map[o].total+=shot.overall;
+      if(shot.overall>map[o].best)map[o].best=shot.overall;
+    }
+  }
+
+  shots.forEach(function(s){
+    if(!s.origin||!s.origin.trim())return;
+    var raw=s.origin.trim();
+
+    // Split on / or , to handle blends like "Colombia/Kenya/Honduras"
+    var parts;
+    if(raw.indexOf('/')>=0){
+      parts=raw.split('/');
+    }else if(raw.indexOf(',')>=0){
+      parts=raw.split(',');
+    }else{
+      parts=[raw];
+    }
+
+    parts.forEach(function(p){addToMap(p,s);});
   });
+
   // Calculate averages
   Object.keys(map).forEach(function(k){
     var d=map[k];
@@ -3610,6 +3635,8 @@ function rPassport(){
     h += '<span class="passport-origin-score" style="color:'+scoreColor+'">'+(o.avg||'?')+'</span>';
     h += '</div>';
     h += '<div class="passport-origin-bar-wrap"><div class="passport-origin-bar" style="width:'+barW+'%;background:'+scoreColor+'"></div></div>';
+    var region = ORIGIN_REGIONS[k]||'';
+    h += '<div style="font-size:9px;letter-spacing:1.5px;color:var(--fog);text-transform:uppercase;margin-bottom:6px">'+(region||'Origin')+'</div>';
     h += '<div style="display:flex;align-items:center;justify-content:space-between">';
     h += '<div class="passport-origin-beans">';
     beanNames.slice(0,3).forEach(function(b){
