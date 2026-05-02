@@ -1058,11 +1058,13 @@ function lookupBeanWithAI(barcode, beanName, cb){
     ? 'Barcode: '+barcode+'. What coffee product is this? Return the roaster name, bean name, origin, roast level, and suggested espresso parameters.'
     : 'Coffee bean: "'+beanName+'". Return the roaster name, origin, roast level, process method, tasting notes, and suggested espresso parameters.';
 
-  fetch('/.netlify/functions/claude',{
+  fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','x-api-key':settings.anthropicKey||'','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-ipc':'true'},
     body:JSON.stringify({
-      type:'bean',
+      model:'claude-haiku-4-5-20251001',
+      max_tokens:300,
+      system:'You are a specialty coffee expert. When given a barcode number or bean name, return ONLY valid JSON with no markdown: {"found":true,"name":"","roaster":"","origin":"","roastLevel":"Medium","process":"Washed","tasting":"1 sentence flavor note","suggestedDose":18,"suggestedYield":36,"suggestedTemp":93} — or if unknown: {"found":false}',
       messages:[{role:'user',content:query}]
     })
   })
@@ -3073,9 +3075,9 @@ function callAssistantAPI(userMsg,ctx,isInitial){
     messages.push({role:'user',content:userMsg});
   }
 
-  fetch('/.netlify/functions/claude',{
+  fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','x-api-key':settings.anthropicKey||'','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-ipc':'true'},
     body:JSON.stringify({
       model:'claude-sonnet-4-5',
       max_tokens:300,
@@ -3456,9 +3458,9 @@ function getAICoaching(shot, cb){
     +'Explain the reasoning in 1-2 sentences based on their taste scores and shot data. '
     +'Keep the total response under 60 words. No bullet points. Write as a direct coaching statement.';
 
-  fetch('/.netlify/functions/claude',{
+  fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','x-api-key':settings.anthropicKey||'','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-ipc':'true'},
     body:JSON.stringify({
       model:'claude-sonnet-4-5',
       max_tokens:150,
@@ -3923,9 +3925,9 @@ function openDialIn(s){
   // Call Claude API
   var prompt=buildDialInPrompt(s);
   // Call via Netlify Function proxy (avoids CORS restriction)
-  fetch('/.netlify/functions/claude',{
+  fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','x-api-key':settings.anthropicKey||'','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-ipc':'true'},
     body:JSON.stringify({
       model:'claude-opus-4-5',
       max_tokens:400,
@@ -3979,7 +3981,7 @@ function aiBeanLookup(query, cb){
   if(query.barcode) userMsg += 'Barcode: ' + query.barcode + '\n';
   userMsg += '\nReturn JSON only.';
 
-  fetch('/.netlify/functions/claude', {
+  fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
@@ -4085,14 +4087,14 @@ function rSettings(){
 
   h+='<div class="set-section"><div class="set-section-title">Journal</div><div class="exp-row" id="st-diary"><span class="exp-icon">\ud83d\udcd6</span><span class="exp-label">Diary ('+diary.length+')</span></div><div class="exp-row" id="st-compare"><span class="exp-icon">\u2696</span><span class="exp-label">Compare setups</span></div><div class="exp-row" id="st-beans"><span class="exp-icon">\u2615</span><span class="exp-label">Bean library ('+beans.length+')</span></div><div class="exp-row" id="st-guide"><span class="exp-icon">\u2295</span><span class="exp-label">Dial-in guide</span></div><div class="exp-row" id="st-passport"><span class="exp-icon">\ud83c\udf0d</span><span class="exp-label">Espresso passport</span></div></div>';
   h+='<div class="set-section"><div class="set-section-title">AI Assistant</div>';
-  h+='<div style="padding:12px 14px;border-radius:12px;background:rgba(212,168,83,.05);border:1px solid rgba(212,168,83,.2);font-size:12px;color:var(--sand);line-height:1.7;margin-bottom:4px">';
-  h+='<span style="display:block;font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px">Setup</span>';
-  h+='1. Get a free API key at <span style="color:var(--gold)">console.anthropic.com</span><br>';
-  h+='2. In Netlify: Site settings → Environment variables<br>';
-  h+='3. Add: <span style="color:var(--gold);font-family:monospace">ANTHROPIC_API_KEY</span> = your key<br>';
-  h+='4. Redeploy your site<br>';
-  h+='5. Tap ✶ Dial-In Assistant on any shot';
-  h+='</div></div>';
+  h+='<div style="font-size:11px;color:var(--fog);line-height:1.6;margin-bottom:12px">Enables Dial-In coaching and smart bean lookup. Get a free key at <span style="color:var(--gold)">console.anthropic.com</span></div>';
+  h+='<div class="fg"><label class="fl">Anthropic API Key</label><input class="fi" id="s-apikey" type="password" placeholder="sk-ant-api03-..." value="'+(settings.anthropicKey||'')+'"></div>';
+  if(settings.anthropicKey){
+    h+='<div style="font-size:10px;color:#3DAA72;margin-top:6px">✓ Key saved — AI features active</div>';
+  }else{
+    h+='<div style="font-size:10px;color:var(--fog);margin-top:6px">Paste your key above and tap Save</div>';
+  }
+  h+='</div>';
   h+='<div class="set-section"><div class="set-section-title">Profile</div><div class="fg"><label class="fl">Your name</label><input class="fi" id="s-name" value="'+(settings.userName||'')+'"></div><div class="g2"><div class="fg"><label class="fl">Default Dose (g)</label><input class="fi" id="s-dose" type="number" step="0.1" value="'+settings.defaultDose+'"></div><div class="fg"><label class="fl">Default Temp (\u00b0C)</label><input class="fi" id="s-temp" type="number" step="0.5" value="'+settings.defaultTemp+'"></div></div></div>';
   h+='<div class="set-section"><div class="set-section-title">Equipment</div><div class="fg"><label class="fl">Espresso Machine</label><select class="fsel" id="s-machine">';
   var byBrand={};MACHINES.forEach(function(m){if(!byBrand[m.b])byBrand[m.b]=[];byBrand[m.b].push(m)});
