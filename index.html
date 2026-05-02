@@ -3073,11 +3073,11 @@ function callAssistantAPI(userMsg,ctx,isInitial){
     messages.push({role:'user',content:userMsg});
   }
 
-  fetch('https://api.anthropic.com/v1/messages',{
+  fetch('/.netlify/functions/claude',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'claude-opus-4-5',
+      model:'claude-sonnet-4-5',
       max_tokens:300,
       system:systemPrompt,
       messages:messages
@@ -3456,11 +3456,11 @@ function getAICoaching(shot, cb){
     +'Explain the reasoning in 1-2 sentences based on their taste scores and shot data. '
     +'Keep the total response under 60 words. No bullet points. Write as a direct coaching statement.';
 
-  fetch('https://api.anthropic.com/v1/messages',{
+  fetch('/.netlify/functions/claude',{
     method:'POST',
-    headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'claude-opus-4-5',
+      model:'claude-sonnet-4-5',
       max_tokens:150,
       messages:[{role:'user',content:prompt}]
     })
