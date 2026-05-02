@@ -562,969 +562,182 @@ var SK='pull_v2',DK='pull_d_v2',STK='pull_s_v2',EK='pull_eq_v2',BK='pull_beans_v
 var shots=JSON.parse(_g(SK,'[]'));
 var diary=JSON.parse(_g(DK,'[]'));
 var beans=JSON.parse(_g(BK,'[]'));
-var settings=JSON.parse(_g(STK,'{"userName":"","defaultDose":18,"defaultTemp":93,"defaultRpm":"200","waterPref":"Third Wave Water","haptics":true,"showDailyWelcome":true,"lastWelcomeDate":""}'));
-['showDailyWelcome','lastWelcomeDate'].forEach(function(k){if(settings[k]==null)settings[k]=k==='showDailyWelcome'?true:''});
-var userEq=JSON.parse(_g(EK,'{"machine":"Fellow|Espresso Series 1","grinder":"Varia|VS4","accessories":["weber_blind_shaker","weber_rnt_9","weber_puck_screen","weber_epf","3ww"]}'));
-var onboarded=_g(OBK,null);
-var savedTheme=JSON.parse(_g(TK,'{"colorIdx":0}'));
+var settings=JSON.parse(_g(STK,'{"userName":"","defaultDose":18,"defaultTemp":93,"defaultRpm":"200","waterPref":"Third Wave Water","haptics":true,"showDailyWelcome":true,"showMorning":false,"lastWelcomeDate":"","lastMorningDate":"","anthropicKey":"","proxyUrl":""}'));
+['showDailyWelcome','lastWelcomeDate','showMorning','lastMorningDate','anthropicKey','proxyUrl'].forEach(function(k){if(settings[k]==null)settings[k]=(k==='showDailyWelcome'||k==='showMorning')?false:'';});
 
-function sS(){_s(SK,JSON.stringify(shots))}
-function sD(){_s(DK,JSON.stringify(diary))}
-function sBn(){_s(BK,JSON.stringify(beans))}
-function sSt(){_s(STK,JSON.stringify(settings))}
-function sEq(){_s(EK,JSON.stringify(userEq))}
-function uid(){return Date.now()+''+Math.floor(Math.random()*9999)}
-function haptic(t){try{if(settings.haptics)navigator.vibrate(t==='heavy'?[20,10,20]:8)}catch(e){}}
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='on';clearTimeout(t._t);t._t=setTimeout(function(){t.className=''},2400)}
+// ── CORE UTILITIES ──────────────────────────────────────────────────
+function el(id){return document.getElementById(id);}
+function gv(id){var e=el(id);return e?e.value:null;}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b},0)/arr.length:0;}
+function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v));}
 
-// ─── MACHINE COLORS ────────────────────────────────────────
-var MACHINE_COLORS={
-  'Fellow|Espresso Series 1':[
-    {name:'Matte Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Cherry Red',swatch:'#9C1C1C',accent:'#C83030',accent2:'#E04848',glow:'rgba(200,48,48,.16)',border:'rgba(200,48,48,.32)'},
-    {name:'Malted Chocolate',swatch:'#5C3A20',accent:'#A06838',accent2:'#C08040',glow:'rgba(160,104,56,.16)',border:'rgba(160,104,56,.30)'},
-    {name:'Woodland Green',swatch:'#3E4937',accent:'#6A8A58',accent2:'#80A86E',glow:'rgba(106,138,88,.16)',border:'rgba(106,138,88,.30)'},
-    {name:'Marine Blue',swatch:'#475FA7',accent:'#6080D0',accent2:'#7898E8',glow:'rgba(96,128,208,.16)',border:'rgba(96,128,208,.32)'},
-    {name:'Sesame',swatch:'#BFBAAC',accent:'#A8A090',accent2:'#C0B8A8',glow:'rgba(168,160,144,.14)',border:'rgba(168,160,144,.28)'}
-  ],
-  'Fellow|Corvo ECS':[
-    {name:'Matte Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Matte White',swatch:'#E0DDD8',accent:'#A09080',accent2:'#B8A890',glow:'rgba(160,144,128,.14)',border:'rgba(160,144,128,.26)'}
-  ],
-  'La Marzocco|Linea Mini':[
-    {name:'Stainless',swatch:'#A8A8A8',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'White',swatch:'#E0DDD8',accent:'#A09080',accent2:'#B8A890',glow:'rgba(160,144,128,.14)',border:'rgba(160,144,128,.26)'},
-    {name:'Red',swatch:'#961818',accent:'#CC3030',accent2:'#E04848',glow:'rgba(204,48,48,.15)',border:'rgba(204,48,48,.30)'},
-    {name:'Yellow',swatch:'#C8A018',accent:'#D8B820',accent2:'#ECD030',glow:'rgba(216,184,32,.15)',border:'rgba(216,184,32,.28)'},
-    {name:'Light Blue',swatch:'#5898B8',accent:'#60A8C8',accent2:'#78C0E0',glow:'rgba(96,168,200,.15)',border:'rgba(96,168,200,.28)'}
-  ],
-  'La Marzocco|Micra':[
-    {name:'Stainless',swatch:'#A8A8A8',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'White',swatch:'#E0DDD8',accent:'#A09080',accent2:'#B8A890',glow:'rgba(160,144,128,.14)',border:'rgba(160,144,128,.26)'},
-    {name:'Leva Blue',swatch:'#2048A0',accent:'#4070CC',accent2:'#5888E0',glow:'rgba(64,112,204,.16)',border:'rgba(64,112,204,.32)'},
-    {name:'Sage',swatch:'#607868',accent:'#78A888',accent2:'#90C0A0',glow:'rgba(120,168,136,.15)',border:'rgba(120,168,136,.28)'}
-  ],
-  'La Marzocco|GS3 AV':[
-    {name:'Stainless',swatch:'#A8A8A8',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'}
-  ],
-  'Breville|Barista Express Impress':[
-    {name:'Brushed Stainless',swatch:'#ACACAC',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black Truffle',swatch:'#222018',accent:'#C4A050',accent2:'#DCC060',glow:'rgba(196,160,80,.14)',border:'rgba(196,160,80,.26)'},
-    {name:'Damson Blue',swatch:'#2C3A60',accent:'#5070B8',accent2:'#6888D0',glow:'rgba(80,112,184,.16)',border:'rgba(80,112,184,.32)'},
-    {name:'Olive Tapenade',swatch:'#4A5230',accent:'#788840',accent2:'#90A050',glow:'rgba(120,136,64,.15)',border:'rgba(120,136,64,.28)'},
-    {name:'Sea Salt',swatch:'#C0C8C4',accent:'#7AA890',accent2:'#90C0A8',glow:'rgba(122,168,144,.14)',border:'rgba(122,168,144,.26)'}
-  ],
-  'Breville|Bambino Plus':[
-    {name:'Brushed Stainless',swatch:'#ACACAC',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'}
-  ],
-  'Breville|Dual Boiler':[
-    {name:'Brushed Stainless',swatch:'#ACACAC',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black Truffle',swatch:'#222018',accent:'#C4A050',accent2:'#DCC060',glow:'rgba(196,160,80,.14)',border:'rgba(196,160,80,.26)'}
-  ],
-  'Gaggia|Classic Pro':[
-    {name:'Cherry Red',swatch:'#901818',accent:'#CC3030',accent2:'#E04848',glow:'rgba(204,48,48,.15)',border:'rgba(204,48,48,.30)'},
-    {name:'Brushed Steel',swatch:'#909090',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'}
-  ],
-  'Gaggia|Classic Evo Pro':[
-    {name:'Red',swatch:'#901818',accent:'#CC3030',accent2:'#E04848',glow:'rgba(204,48,48,.15)',border:'rgba(204,48,48,.30)'},
-    {name:'Stainless',swatch:'#909090',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'}
-  ],
-  'Rocket|Appartamento':[
-    {name:'Stainless & Chrome',swatch:'#A8A8A8',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'White Panels',swatch:'#E0E0DC',accent:'#A09080',accent2:'#B8A890',glow:'rgba(160,144,128,.14)',border:'rgba(160,144,128,.26)'},
-    {name:'Copper Panels',swatch:'#9A5A28',accent:'#C47828',accent2:'#DC9838',glow:'rgba(196,120,40,.16)',border:'rgba(196,120,40,.30)'}
-  ],
-  'ECM|Synchronika':[
-    {name:'Stainless',swatch:'#A0A0A0',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Anthracite',swatch:'#3C3E44',accent:'#8090A8',accent2:'#9AA8C0',glow:'rgba(128,144,168,.14)',border:'rgba(128,144,168,.26)'}
-  ],
-  'Lelit|Bianca V3':[
-    {name:'Stainless',swatch:'#A0A0A0',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'White',swatch:'#E0DDD8',accent:'#A09080',accent2:'#B8A890',glow:'rgba(160,144,128,.14)',border:'rgba(160,144,128,.26)'}
-  ],
-  'Decent|DE1Pro':[
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Silver',swatch:'#A8ACB0',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'}
-  ],
-  'Flair|Flair 58':[
-    {name:'Black',swatch:'#1A1A1A',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'},
-    {name:'Silver',swatch:'#A8A8A8',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'}
-  ],
-  'Rancilio|Silvia Pro X':[
-    {name:'Stainless',swatch:'#A8A8A8',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'}
-  ]
-};
-var DEFAULT_COLORS=[{name:'Gold',swatch:'#2A2418',accent:'#D4A853',accent2:'#F0C060',glow:'rgba(212,168,83,.14)',border:'rgba(212,168,83,.26)'}];
-
-function getMachineColors(){return MACHINE_COLORS[userEq.machine]||DEFAULT_COLORS}
-function getCurrentTheme(){var c=getMachineColors(),i=Math.min(savedTheme.colorIdx||0,c.length-1);return c[i]}
-function applyTheme(t){var r=document.documentElement;r.style.setProperty('--gold',t.accent);r.style.setProperty('--gold2',t.accent2);r.style.setProperty('--gold-glow',t.glow);r.style.setProperty('--gold-border',t.border)}
-function setThemeColor(idx){savedTheme.colorIdx=idx;_s(TK,JSON.stringify(savedTheme));applyTheme(getCurrentTheme());go('settings')}
-applyTheme(getCurrentTheme());
-
-// ─── CONSTANTS ─────────────────────────────────────────────
-var MACHINES=[
-  {b:'Fellow',m:'Espresso Series 1',t:'Semi-Auto',pf:58},
-  {b:'Fellow',m:'Corvo ECS',t:'Semi-Auto',pf:58},
-  {b:'La Marzocco',m:'Linea Mini',t:'Dual Boiler',pf:58},
-  {b:'La Marzocco',m:'Micra',t:'Dual Boiler',pf:58},
-  {b:'La Marzocco',m:'GS3 AV',t:'Dual Boiler Semi-Auto',pf:58},
-  {b:'Breville',m:'Barista Express Impress',t:'Semi-Auto w/ Grinder',pf:54},
-  {b:'Breville',m:'Bambino Plus',t:'Thermojet',pf:54},
-  {b:'Breville',m:'Dual Boiler',t:'Dual Boiler',pf:58},
-  {b:'Breville',m:'Oracle Touch',t:'Auto w/ Grinder',pf:58},
-  {b:'Gaggia',m:'Classic Pro',t:'Single Boiler',pf:58},
-  {b:'Gaggia',m:'Classic Evo Pro',t:'Single Boiler',pf:58},
-  {b:'Rancilio',m:'Silvia Pro X',t:'Dual Boiler',pf:58},
-  {b:'Rocket',m:'Appartamento',t:'HX E61',pf:58},
-  {b:'Rocket',m:'Mozzafiato Cronometro',t:'HX E61',pf:58},
-  {b:'ECM',m:'Synchronika',t:'Dual Boiler E61',pf:58},
-  {b:'ECM',m:'Classika PID',t:'Single Boiler E61',pf:58},
-  {b:'Lelit',m:'Bianca V3',t:'Dual Boiler Paddle',pf:58},
-  {b:'Lelit',m:'Elizabeth',t:'Dual Boiler',pf:58},
-  {b:'Profitec',m:'Pro 700',t:'Dual Boiler E61',pf:58},
-  {b:'Decent',m:'DE1Pro',t:'Profile Auto',pf:58},
-  {b:'Flair',m:'Flair 58',t:'Manual Lever',pf:58},
-  {b:'Flair',m:'Flair Pro 2',t:'Manual Lever',pf:58},
-  {b:'Cafelat',m:'Robot Barista',t:'Manual Lever',pf:58},
-  {b:'Other',m:'Custom Machine',t:'',pf:58}
-];
-var GRINDERS=[
-  {b:'Varia',m:'VS4',t:'Conical 53mm, variable speed'},
-  {b:'Varia',m:'VS3',t:'Conical 48mm'},
-  {b:'Niche',m:'Zero',t:'Conical 63mm, ~0g retention'},
-  {b:'Niche',m:'Duo',t:'Conical 63mm, dual-purpose'},
-  {b:'Weber Workshop',m:'EG-1',t:'Flat 83mm titanium'},
-  {b:'Weber Workshop',m:'Key',t:'Conical 38mm SSP'},
-  {b:'Timemore',m:'Sculptor 078S',t:'Flat 78mm titanium'},
-  {b:'Timemore',m:'Sculptor 064S',t:'Flat 64mm titanium'},
-  {b:'DF83',m:'V2',t:'Flat 83mm, 0g retention'},
-  {b:'DF64',m:'Gen 2',t:'Flat 64mm, 0g retention'},
-  {b:'Eureka',m:'Mignon Specialita',t:'Flat 55mm, stepless'},
-  {b:'Eureka',m:'Mignon Oro Single Dose',t:'Flat 55mm, single dose'},
-  {b:'Fellow',m:'Opus Conical',t:'Conical 40mm SSP'},
-  {b:'Baratza',m:'Vario+',t:'Flat 54mm ceramic'},
-  {b:'Mazzer',m:'Kony S',t:'Conical 63mm'},
-  {b:'1Zpresso',m:'JX-Pro',t:'Hand conical 48mm'},
-  {b:'Comandante',m:'C40 MK4',t:'Hand 38mm nitro blade'},
-  {b:'Timemore',m:'Chestnut X Pro',t:'Hand conical 48mm'},
-  {b:'Kinu',m:'M47 Simplicity',t:'Hand conical 47mm'},
-  {b:'Other',m:'Custom Grinder',t:''}
-];
-
-// ── GRINDER-AWARE LANGUAGE ───────────────────────────────────────────
-function grinderName(){
-  if(!userEq.grinder)return'your grinder';
-  var parts=userEq.grinder.split('|');
-  return(parts[0]||'')+(parts[1]?' '+parts[1]:'');
-}
-function grinderIsStepless(){
-  // Stepless grinders get clicks guidance; stepped get numeric guidance
-  var stepless=['Varia','Niche','Weber','DF83','DF64','Eureka','Baratza','Mazzer','Lelit','ECM','Rocket'];
-  if(!userEq.grinder)return true;
-  var b=userEq.grinder.split('|')[0];
-  return stepless.indexOf(b)>=0;
-}
-function grinderAdjust(direction){
-  // direction: 'coarser' or 'finer'
-  var hand=['1Zpresso','Comandante','Timemore','Kinu'].indexOf((userEq.grinder||'').split('|')[0])>=0;
-  if(hand)return direction==='coarser'?'1–2 clicks coarser':'1–2 clicks finer';
-  return direction==='coarser'?'0.3–0.5 notches coarser':'0.3–0.5 notches finer';
-}
-function machineIsSingleBoiler(){
-  var sb=['Gaggia|Classic Pro','Gaggia|Classic Evo Pro','Rancilio|Silvia Pro X','Flair|Flair 58','Flair|Flair Pro 2','Cafelat|Robot Barista'];
-  return sb.indexOf(userEq.machine||'')>=0;
-}
-function machineIsLever(){
-  return(userEq.machine||'').indexOf('Flair')>=0||(userEq.machine||'').indexOf('Robot')>=0;
-}
-function machineIsManual(){
-  return machineIsLever();
-}
-function rpmLabel(){
-  // Only variable-speed grinders have RPM; hand grinders don't
-  var hand=['1Zpresso','Comandante','Timemore','Kinu'].indexOf((userEq.grinder||'').split('|')[0])>=0;
-  if(hand)return null;
-  var hasRPM=['Varia'].indexOf((userEq.grinder||'').split('|')[0])>=0;
-  return hasRPM?'RPM ('+grinderName()+')':'Grind Speed';
-}
-var ACCESSORIES=[
-  {id:'weber_blind_shaker',n:'Weber Blind Shaker',c:'Distribution'},
-  {id:'wdt_tool',n:'WDT Tool',c:'Distribution'},
-  {id:'dosing_funnel',n:'Dosing Funnel / Cup',c:'Distribution'},
-  {id:'weber_puck_screen',n:'Weber Puck Screen 58mm',c:'Puck Prep'},
-  {id:'weber_epf',n:'Weber EPF Paper Filters',c:'Puck Prep'},
-  {id:'ims_shower',n:'IMS Precision Shower Screen',c:'Puck Prep'},
-  {id:'weber_rnt_9',n:'Weber RNT 9kg Tamper',c:'Tamper'},
-  {id:'weber_rnt_12',n:'Weber RNT 12kg Tamper',c:'Tamper'},
-  {id:'pullman_big_step',n:'Pullman Big Step 58.5mm',c:'Tamper'},
-  {id:'pullman_54',n:'Pullman 54mm Tamper',c:'Tamper'},
-  {id:'fellow_tamper',n:'Fellow Stock Tamper',c:'Tamper'},
-  {id:'breville_tamper',n:'Breville Stock Tamper (54mm)',c:'Tamper'},
-  {id:'generic_58_tamper',n:'Precision 58mm Tamper',c:'Tamper'},
-  {id:'weber_unibasket_20',n:'Weber Unibasket 20g',c:'Basket'},
-  {id:'weber_unibasket_18',n:'Weber Unibasket 18g',c:'Basket'},
-  {id:'vst_18',n:'VST Basket 18g',c:'Basket'},
-  {id:'vst_20',n:'VST Basket 20g',c:'Basket'},
-  {id:'vst_22',n:'VST Basket 22g',c:'Basket'},
-  {id:'ims_18',n:'IMS Competition 18g',c:'Basket'},
-  {id:'ims_20',n:'IMS Competition 20g',c:'Basket'},
-  {id:'fellow_basket_sw',n:'Fellow Stock 18g Single-Wall',c:'Basket'},
-  {id:'breville_sw_18',n:'Breville Single-Wall 18g (54mm)',c:'Basket'},
-  {id:'acaia_lunar',n:'Acaia Lunar',c:'Scale'},
-  {id:'acaia_pearl',n:'Acaia Pearl',c:'Scale'},
-  {id:'acaia_pyxis',n:'Acaia Pyxis',c:'Scale'},
-  {id:'timemore_black_mirror',n:'Timemore Black Mirror Basic+',c:'Scale'},
-  {id:'felicita_arc',n:'Felicita Arc Scale',c:'Scale'},
-  {id:'difluid',n:'DiFluid R2 Extract',c:'Scale'},
-  {id:'bookoo_themis_mini',n:'Bookoo Themis Mini',c:'Scale'},
-  {id:'bookoo_themis_ultra',n:'Bookoo Themis Ultra',c:'Scale'},
-  {id:'3ww',n:'Third Wave Water Packets',c:'Water'},
-  {id:'brita',n:'Filtered Water (Brita etc.)',c:'Water'}
-];
-var DRINKS=['Espresso','Ristretto','Lungo','Flat White','Latte','Cappuccino','Cortado','Macchiato','Americano'];
-var ROASTS=['Light','Light-Medium','Medium','Medium-Dark','Dark'];
-var WATERS=['Third Wave Water','Filtered','Spring','Tap'];
-var RPMS=['150','175','200','225','250','275','300'];
-var PCONDS=['Perfect Puck','Clean','Slightly Wet','Channeling','Blonding','Collapsed'];
-var EXTS=['Under-Extracted','Slightly Under','Balanced','Slightly Over','Over-Extracted'];
-var MILKS=['Whole Milk','2% Milk','Oat Milk','Almond Milk','Soy Milk'];
-var MILK_DRINKS=['Latte','Flat White','Cappuccino','Cortado','Macchiato'];
-
-// ─── HELPERS ───────────────────────────────────────────────
-function sC(s){if(s>=9.5)return'#3DAA72';if(s>=9)return'#5DC090';if(s>=8.5)return'#88D4A8';if(s>=8)return'#D4A853';if(s>=7)return'#E8924A';if(s>=6)return'#D07040';return'#C85040'}
-function scoreWord(s){if(s>=9.5)return'Transcendent';if(s>=9)return'Exceptional';if(s>=8.5)return'Outstanding';if(s>=8)return'Excellent';if(s>=7.5)return'Very Good';if(s>=7)return'Good';if(s>=6)return'Developing';return'Keep Dialing'}
-function riInfo(r){if(r<1.5)return{t:'Very Ristretto',c:'#4A80D0'};if(r<1.8)return{t:'Ristretto',c:'#4A80D0'};if(r<=2.2)return{t:'Classic 1:2',c:'#3DAA72'};if(r<=2.5)return{t:'Lungo',c:'#D4A853'};return{t:'Very Lungo',c:'#C85040'}}
-function avg(a){var s=0;for(var i=0;i<a.length;i++)s+=a[i];return a.length?s/a.length:0}
-function greet(){var h=new Date().getHours(),n=settings.userName?' '+settings.userName.split(' ')[0]:'';return(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+n}
-function calcStreak(){if(!shots.length)return 0;var today=new Date().toISOString().slice(0,10),dates=[];shots.forEach(function(s){if(dates.indexOf(s.date)<0)dates.push(s.date)});dates.sort(function(a,b){return b.localeCompare(a)});var y=new Date(Date.now()-864e5).toISOString().slice(0,10);if(dates[0]!==today&&dates[0]!==y)return 0;var st=1;for(var i=1;i<dates.length;i++){if((new Date(dates[i-1])-new Date(dates[i]))/864e5===1)st++;else break}return st}
-function computeSug(){return Math.round(Math.min(10,Math.max(1,(F.sweetness*2+F.acidity+F.body+F.aroma+F.finish*1.5+(10-F.bitterness)*.5)/7))*2)/2}
-function selOpts(a,c){return a.map(function(v){return'<option'+(v===c?' selected':'')+'>'+v+'</option>'}).join('')}
-function gv(id){var e=document.getElementById(id);return e?e.value:null}
-function el(id){return document.getElementById(id)}
-function mk(tag,cls,inner){var d=document.createElement(tag);if(cls)d.className=cls;if(inner)d.innerHTML=inner;return d}
-
-function radarSVG(s,sz){
-  var at=['aroma','acidity','sweetness','body','finish'],lb=['AROMA','ACID','SWEET','BODY','FINISH'];
-  var n=5,cx=sz/2,cy=sz/2,r=sz*.36,pts=[],web=[];
-  for(var i=0;i<n;i++){var a=(i/n)*Math.PI*2-Math.PI/2,v=parseFloat(s[at[i]])||7;pts.push([cx+Math.cos(a)*r*(v/10),cy+Math.sin(a)*r*(v/10)]);web.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r])}
-  var h='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 '+sz+' '+sz+'" style="overflow:visible">';
-  [.25,.5,.75].forEach(function(f){var pp=web.map(function(p){return(cx+(p[0]-cx)*f)+','+(cy+(p[1]-cy)*f)}).join(' ');h+='<polygon points="'+pp+'" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1"/>'});
-  h+='<polygon points="'+web.map(function(p){return p[0]+','+p[1]}).join(' ')+'" fill="none" stroke="rgba(212,168,83,.2)" stroke-width="1" stroke-dasharray="2,3"/>';
-  web.forEach(function(p){h+='<line x1="'+cx+'" y1="'+cy+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="rgba(255,255,255,.05)" stroke-width="1"/>'});
-  web.forEach(function(p,i){var a=(i/n)*Math.PI*2-Math.PI/2;[.5,.7,.9].forEach(function(f){var mx=cx+Math.cos(a)*r*f,my=cy+Math.sin(a)*r*f,tx=Math.cos(a+Math.PI/2)*3,ty=Math.sin(a+Math.PI/2)*3;h+='<line x1="'+(mx-tx)+'" y1="'+(my-ty)+'" x2="'+(mx+tx)+'" y2="'+(my+ty)+'" stroke="rgba(255,255,255,.12)" stroke-width="1"/>'})});
-  h+='<polygon points="'+pts.map(function(p){return p[0]+','+p[1]}).join(' ')+'" fill="rgba(212,168,83,.12)" stroke="rgba(240,192,96,.7)" stroke-width="1.2"/>';
-  pts.forEach(function(p){h+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3" fill="#F0C060" stroke="rgba(0,0,0,.3)" stroke-width="1"/>'});
-  web.forEach(function(p,i){var a=(i/n)*Math.PI*2-Math.PI/2,lx=cx+Math.cos(a)*(r+15),ly=cy+Math.sin(a)*(r+15);h+='<text x="'+lx+'" y="'+(ly+3)+'" text-anchor="middle" fill="#8A8270" font-size="7" font-weight="600" letter-spacing="1.5">'+lb[i]+'</text>'});
-  return h+'</svg>'
-}
-
-// ─── BEAN LIBRARY ──────────────────────────────────────────
-function findBeanByBarcode(c){if(!c)return null;for(var i=0;i<beans.length;i++)if(beans[i].barcode===c)return beans[i];return null}
-function findBeanById(id){for(var i=0;i<beans.length;i++)if(beans[i].id===id)return beans[i];return null}
-function saveBeanToLib(d){if(!d||!d.name)return null;var ex=d.barcode?findBeanByBarcode(d.barcode):null;if(ex){ex.name=d.name||ex.name;ex.roaster=d.roaster||ex.roaster;ex.origin=d.origin||ex.origin;ex.roastLevel=d.roastLevel||ex.roastLevel;ex.lastUsed=new Date().toISOString();sBn();return ex}var b={id:uid(),barcode:d.barcode||null,name:d.name,roaster:d.roaster||'',origin:d.origin||'',roastLevel:d.roastLevel||'Medium',scanSource:d.scanSource||'manual',shotCount:0,lastUsed:new Date().toISOString()};beans.unshift(b);sBn();return b}
-function bumpBean(id){var b=findBeanById(id);if(!b)return;b.shotCount=(b.shotCount||0)+1;b.lastUsed=new Date().toISOString();sBn()}
-function getRecentBeans(n){return beans.slice().sort(function(a,b){return(b.lastUsed||'').localeCompare(a.lastUsed||'')}).slice(0,n||50)}
-
-// ─── BARCODE LOOKUP ────────────────────────────────────────
-
-// ── SPECIALTY COFFEE DATABASE ────────────────────────────────────────
-// Curated barcodes + dial-in data for popular specialty roasters.
-// Used as first lookup before hitting external APIs.
-// Format: barcode -> {name, roaster, origin, roastLevel, dose, yld, notes}
-var COFFEE_DB={
-  // ── Onyx Coffee Lab ──────────────────────────────────────────────
-  '850016591001':{name:'Southern Weather',roaster:'Onyx Coffee Lab',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '850016591018':{name:'Geometry',roaster:'Onyx Coffee Lab',origin:'Blend',roastLevel:'Light-Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '850016591025':{name:'Linear',roaster:'Onyx Coffee Lab',origin:'Blend',roastLevel:'Light',dose:18,yld:40,grindHint:'Medium'},
-  '850016591032':{name:'Monarch',roaster:'Onyx Coffee Lab',origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium-coarse'},
-
-  // ── Stumptown ────────────────────────────────────────────────────
-  '851512002001':{name:'Hair Bender',roaster:'Stumptown',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '851512002018':{name:'Holler Mountain',roaster:'Stumptown',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '851512002025':{name:'French Roast',roaster:'Stumptown',origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium-coarse'},
-  '851512002032':{name:'Trapper Creek',roaster:'Stumptown',origin:'Alaska Blend',roastLevel:'Medium-Dark',dose:18,yld:36,grindHint:'Medium'},
-
-  // ── Counter Culture ───────────────────────────────────────────────
-  '898787001001':{name:'Big Truck',roaster:'Counter Culture',origin:'Blend',roastLevel:'Medium-Dark',dose:18,yld:36,grindHint:'Medium-fine'},
-  '898787001018':{name:'Forty-Six',roaster:'Counter Culture',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '898787001025':{name:'Apollo',roaster:'Counter Culture',origin:'Blend',roastLevel:'Medium',dose:17,yld:34,grindHint:'Medium-fine'},
-  '898787001032':{name:'Slow Motion',roaster:'Counter Culture',origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium'},
-
-  // ── Intelligentsia ────────────────────────────────────────────────
-  '851475004001':{name:'Black Cat Classic',roaster:'Intelligentsia',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '851475004018':{name:'House Espresso',roaster:'Intelligentsia',origin:'Blend',roastLevel:'Medium-Dark',dose:18,yld:36,grindHint:'Medium-fine'},
-
-  // ── Blue Bottle ───────────────────────────────────────────────────
-  '858020003001':{name:'Giant Steps',roaster:'Blue Bottle',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '858020003018':{name:'Bella Donovan',roaster:'Blue Bottle',origin:'Blend',roastLevel:'Medium-Dark',dose:18,yld:38,grindHint:'Medium'},
-  '858020003025':{name:'Three Africas',roaster:'Blue Bottle',origin:'Africa Blend',roastLevel:'Medium',dose:17,yld:34,grindHint:'Medium-fine'},
-
-  // ── Verve Coffee Roasters ─────────────────────────────────────────
-  '853818004001':{name:'Streetlevel',roaster:'Verve',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '853818004018':{name:'Sermon',roaster:'Verve',origin:'Blend',roastLevel:'Medium-Dark',dose:18,yld:36,grindHint:'Medium'},
-
-  // ── Lavazza ───────────────────────────────────────────────────────
-  '041953001001':{name:'Super Crema',roaster:'Lavazza',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '041953001018':{name:'Crema e Gusto',roaster:'Lavazza',origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium'},
-  '041953001025':{name:'Gran Espresso',roaster:'Lavazza',origin:'Blend',roastLevel:'Medium-Dark',dose:18,yld:36,grindHint:'Medium-fine'},
-  '041953001032':{name:'Qualita Rossa',roaster:'Lavazza',origin:'Blend',roastLevel:'Medium-Dark',dose:18,yld:36,grindHint:'Medium-fine'},
-  '076720012018':{name:'Super Crema',roaster:'Lavazza',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-
-  // ── Illy ──────────────────────────────────────────────────────────
-  '011400000001':{name:'Classico Espresso',roaster:'illy',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-  '011400000018':{name:'Intenso',roaster:'illy',origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium'},
-  '011400000025':{name:'Forte',roaster:'illy',origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium'},
-
-  // ── Peet's ────────────────────────────────────────────────────────
-  '015872010001':{name:'Espresso Forte',roaster:"Peet's",origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium'},
-  '015872010018':{name:"Major Dickason's Blend",roaster:"Peet's",origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium-coarse'},
-  '015872010025':{name:'French Roast',roaster:"Peet's",origin:'Blend',roastLevel:'Dark',dose:19,yld:38,grindHint:'Medium-coarse'},
-
-  // ── Philz ─────────────────────────────────────────────────────────
-  '852480005001':{name:'Tesora',roaster:'Philz',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-
-  // ── Fellow / Atlas ────────────────────────────────────────────────
-  '860004159001':{name:'Atlas Espresso Blend',roaster:'Fellow',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-
-  // ── Local Texas / Regional ────────────────────────────────────────
-  '860009123001':{name:'Texas Pecan',roaster:'HEB',origin:'Blend',roastLevel:'Medium',dose:18,yld:36,grindHint:'Medium-fine'},
-};
-
-function lookupCoffeeDB(code){
-  var entry=COFFEE_DB[code];
-  if(!entry)return null;
-  return{
-    barcode:code,
-    found:true,
-    source:'pulldb',
-    name:entry.name,
-    roaster:entry.roaster,
-    origin:entry.origin,
-    roastLevel:entry.roastLevel,
-    // Dial-in hints stored for later use
-    suggestedDose:entry.dose,
-    suggestedYld:entry.yld,
-    grindHint:entry.grindHint||''
-  };
-}
-
-// Fuzzy name search across the coffee DB
-function searchCoffeeDB(query){
-  if(!query||query.length<3)return[];
-  var q=query.toLowerCase();
-  var results=[];
-  Object.keys(COFFEE_DB).forEach(function(code){
-    var e=COFFEE_DB[code];
-    var score=0;
-    var name=(e.name||'').toLowerCase();
-    var roaster=(e.roaster||'').toLowerCase();
-    if(name===q||roaster===q)score=100;
-    else if(name.indexOf(q)===0||roaster.indexOf(q)===0)score=80;
-    else if(name.indexOf(q)>=0)score=60;
-    else if(roaster.indexOf(q)>=0)score=50;
-    if(score>0)results.push({code:code,entry:e,score:score});
-  });
-  return results.sort(function(a,b){return b.score-a.score}).slice(0,5);
-}
-
-// ── MULTI-SOURCE BARCODE LOOKUP ──────────────────────────────────────
-// Sources tried in order:
-// 1. Local bean library (instant, no network)
-// 2. Open Food Facts (global food product DB)
-// 3. UPC Item DB (US-focused, good for North American coffee brands)
-
-function parseOFFProduct(p,code){
-  var nm=p.product_name_en||p.product_name||'';
-  var br=p.brands?p.brands.split(',')[0].trim():'';
-  var or=p.origin_en||p.origins_en||'';
-  if(Array.isArray(or))or=or[0]||'';
-  or=or.split(',')[0].trim();
-  var rl='Medium';
-  var cats=((p.categories_tags||[]).join(' ')+' '+(p.labels_tags||[]).join(' ')+' '+(p.categories||'')+' '+(p.labels||'')).toLowerCase();
-  if(cats.indexOf('dark-roast')>=0||cats.indexOf('dark roast')>=0)rl='Dark';
-  else if(cats.indexOf('light-roast')>=0||cats.indexOf('light roast')>=0)rl='Light';
-  else if(cats.indexOf('medium-dark')>=0||cats.indexOf('medium dark')>=0)rl='Medium-Dark';
-  else if(cats.indexOf('medium-light')>=0||cats.indexOf('medium light')>=0)rl='Light-Medium';
-  return{barcode:code,found:!!(nm||br),source:'off',name:nm.trim(),roaster:br,origin:or,roastLevel:rl};
-}
-
-function lookupBarcode(code,cb){
-  // 1. Local library — instant
-  var loc=findBeanByBarcode(code);
-  if(loc){cb({barcode:code,found:true,source:'library',beanId:loc.id,name:loc.name,roaster:loc.roaster,origin:loc.origin,roastLevel:loc.roastLevel});return}
-
-  // 2. Pull specialty coffee database — instant, offline
-  var dbHit=lookupCoffeeDB(code);
-  if(dbHit){cb(dbHit);return}
-
-  var done=false;
-  function finish(r){if(done)return;done=true;clearTimeout(tid);cb(r)}
-
-  // Overall timeout 8 seconds (try multiple sources)
-  var tid=setTimeout(function(){finish({barcode:code,found:false,source:'timeout',name:'',roaster:'',origin:''})},8000);
-
-  // 2. Open Food Facts
-  fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,product_name_en,brands,origin_en,origins_en,categories,categories_tags,labels,labels_tags')
-    .then(function(r){return r.json()})
-    .then(function(d){
-      if(done)return;
-      if(d&&d.status===1&&d.product){
-        var r=parseOFFProduct(d.product,code);
-        if(r.found){finish(r);return}
-      }
-      // 3. Try UPC Item DB as secondary source
-      return fetch('https://api.upcitemdb.com/prod/trial/lookup?upc='+encodeURIComponent(code))
-        .then(function(r2){return r2.json()})
-        .then(function(d2){
-          if(done)return;
-          if(d2&&d2.items&&d2.items.length>0){
-            var item=d2.items[0];
-            var nm=item.title||'';
-            var br=item.brand||'';
-            var desc=(item.description||'').toLowerCase();
-            var rl='Medium';
-            if(desc.indexOf('dark')>=0)rl='Dark';
-            else if(desc.indexOf('light')>=0)rl='Light';
-            finish({barcode:code,found:!!(nm||br),source:'upcdb',name:nm,roaster:br,origin:'',roastLevel:rl});
-          }else{
-            finish({barcode:code,found:false,source:'notfound',name:'',roaster:'',origin:''});
-          }
-        }).catch(function(){
-          finish({barcode:code,found:false,source:'notfound',name:'',roaster:'',origin:''});
-        });
-    })
-    .catch(function(){
-      // OFF failed — try UPC Item DB directly
-      fetch('https://api.upcitemdb.com/prod/trial/lookup?upc='+encodeURIComponent(code))
-        .then(function(r2){return r2.json()})
-        .then(function(d2){
-          if(done)return;
-          if(d2&&d2.items&&d2.items.length>0){
-            var item=d2.items[0];
-            finish({barcode:code,found:!!(item.title||item.brand),source:'upcdb',name:item.title||'',roaster:item.brand||'',origin:'',roastLevel:'Medium'});
-          }else{
-            finish({barcode:code,found:false,source:'error',name:'',roaster:'',origin:''});
-          }
-        }).catch(function(){
-          // UPC DB failed — try AI identification
-          toast('Looking up with AI…');
-          aiBeanLookup({barcode:code}, function(bean){
-            if(bean && bean.found){
-              finish({
-                barcode:code, found:true, source:'ai',
-                name:bean.name||'', roaster:bean.roaster||'',
-                origin:bean.origin||'', roastLevel:bean.roastLevel||'Medium',
-                suggestedDose:bean.suggestedDose||F.dose,
-                suggestedYield:bean.suggestedYield||F.yld,
-                flavorNotes:bean.flavorNotes||''
-              });
-            }else{
-              // Final fallback: AI bean lookup via Netlify Function
-              lookupBeanWithAI(code, null, function(aiResult){
-                if(aiResult && aiResult.found){
-                  finish(aiResult);
-                }else{
-                  finish({barcode:code,found:false,source:'none',name:'',roaster:'',origin:''});
-                }
-              });
-            }
-          });
-        });
-    });
-}
-
-
-// ═══════════════════════════════════════════════════════════════
-// AI BEAN LOOKUP — via Netlify Function
-// Called when barcode not found in local DB, OFF, or UPC Item DB
-// ═══════════════════════════════════════════════════════════════
-function lookupBeanWithAI(barcode, beanName, cb){
-  // Build the query — use barcode or name
-  var query = barcode
-    ? 'Barcode: '+barcode+'. What coffee product is this? Return the roaster name, bean name, origin, roast level, and suggested espresso parameters.'
-    : 'Coffee bean: "'+beanName+'". Return the roaster name, origin, roast level, process method, tasting notes, and suggested espresso parameters.';
-
-  fetch('/.netlify/functions/claude',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:300,
-      system:'You are a specialty coffee expert. When given a barcode number or bean name, return ONLY valid JSON with no markdown: {"found":true,"name":"","roaster":"","origin":"","roastLevel":"Medium","process":"Washed","tasting":"1 sentence flavor note","suggestedDose":18,"suggestedYield":36,"suggestedTemp":93} — or if unknown: {"found":false}',
-      messages:[{role:'user',content:query}]
-    })
-  })
-  .then(function(r){return r.json()})
-  .then(function(d){
-    var text=(d&&d.content&&d.content[0]&&d.content[0].text)||'';
-    if(!text){cb(null);return;}
-    try{
-      // Strip any markdown fences if present
-      var clean=text.replace(/```json|```/g,'').trim();
-      var parsed=JSON.parse(clean);
-      if(!parsed.found){cb(null);return;}
-      cb({
-        barcode:barcode||'',
-        found:true,
-        source:'ai',
-        name:parsed.name||beanName||'',
-        roaster:parsed.roaster||'',
-        origin:parsed.origin||'',
-        roastLevel:parsed.roastLevel||'Medium',
-        process:parsed.process||'',
-        variety:parsed.variety||'',
-        flavorNotes:parsed.tasting||'',
-        suggestedDose:parsed.suggestedDose||18,
-        suggestedYield:parsed.suggestedYield||36,
-        suggestedTemp:parsed.suggestedTemp||93
-      });
-    }catch(e){
-      cb(null);
-    }
-  })
-  .catch(function(){cb(null)});
-}
-
-// AI bean name search — called from wizard bean field when user types
-function lookupBeanNameWithAI(name, cb){
-  if(!name||name.length<3){cb(null);return;}
-  lookupBeanWithAI(null, name, cb);
-}
-
-// ─── SCANNER (manual entry) ────────────────────────────────
-var scanCb=null;
-// ─── SCANNER ──────────────────────────────────────────────
-var scanCamStream=null, scanCamRAF=null, scanCamDetector=null;
-
-function startScan(cb){
-  scanCb=cb; haptic('light');
-  // Always open the picker — user chooses camera or manual
-  openScanPicker();
-}
-
-function openScanPicker(){
-  var overlay=document.createElement('div');
-  overlay.id='scan-picker';
-  overlay.className='sheet-overlay';
-  overlay.innerHTML=
-    '<div class="sheet">'+
-      '<div class="sheet-handle"></div>'+
-      '<div class="sheet-title">Scan a Bag</div>'+
-      '<div class="sheet-sub">How would you like to scan?</div>'+
-      '<div class="scan-opts" style="margin-bottom:8px">'+
-        '<button class="scan-tile" id="sp-camera">'+
-          '<div class="scan-tile-icon">\ud83d\udcf7</div>'+
-          '<div><div class="scan-tile-name">Camera</div>'+
-          '<div class="scan-tile-sub">Point at barcode</div></div>'+
-        '</button>'+
-        '<button class="scan-tile" id="sp-manual">'+
-          '<div class="scan-tile-icon">\u2630</div>'+
-          '<div><div class="scan-tile-name">Type Barcode</div>'+
-          '<div class="scan-tile-sub">Enter number manually</div></div>'+
-        '</button>'+
-      '</div>'+
-      '<button class="btn-g" style="width:100%" id="sp-cancel">Cancel</button>'+
-    '</div>';
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
-  document.getElementById('sp-cancel').addEventListener('click',function(){overlay.remove()});
-  document.getElementById('sp-manual').addEventListener('click',function(){overlay.remove();openManualEntry()});
-  document.getElementById('sp-camera').addEventListener('click',function(){
-    overlay.remove();
-    // Check if camera is available
-    var secure=!!(window.isSecureContext||location.protocol==='https:'||location.hostname==='localhost');
-    var hasMedia=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
-    if(secure&&hasMedia){
-      openCameraScanner();
-    }else{
-      openManualEntry();
-      setTimeout(function(){
-        var st=document.getElementById('me-st');
-        if(st){
-          st.textContent='Camera needs HTTPS \u2014 host on Netlify to enable';
-          st.style.color='var(--amber)';
-        }
-      },300);
-    }
-  });
-}
-
-function openCameraScanner(){
-  // Inject scan animation style once
-  if(!document.getElementById('scan-anim-style')){
-    var st=document.createElement('style');
-    st.id='scan-anim-style';
-    st.textContent='@keyframes scanLine{0%{top:15%}50%{top:75%}100%{top:15%}}';
-    document.head.appendChild(st);
-  }
-  var overlay=document.createElement('div');
-  overlay.id='cam-overlay';
-  overlay.style.cssText='position:fixed;inset:0;z-index:600;background:#000;display:flex;flex-direction:column;overflow:hidden';
-  overlay.innerHTML=
-    '<div style="position:relative;flex:1;overflow:hidden;background:#000">'+
-      '<video id="cam-video" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" autoplay muted playsinline webkit-playsinline></video>'+
-      '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.6) 0%,transparent 30%,transparent 70%,rgba(0,0,0,.6) 100%)"></div>'+
-      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">'+
-        '<div style="width:72vw;max-width:280px;height:140px;position:relative">'+
-          '<div style="position:absolute;top:0;left:0;width:24px;height:24px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)"></div>'+
-          '<div style="position:absolute;top:0;right:0;width:24px;height:24px;border-top:2px solid var(--gold);border-right:2px solid var(--gold)"></div>'+
-          '<div style="position:absolute;bottom:0;left:0;width:24px;height:24px;border-bottom:2px solid var(--gold);border-left:2px solid var(--gold)"></div>'+
-          '<div style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)"></div>'+
-          '<div style="position:absolute;left:5%;right:5%;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);box-shadow:0 0 6px var(--gold);animation:scanLine 2s ease-in-out infinite;top:50%"></div>'+
-        '</div>'+
-      '</div>'+
-      '<div style="position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top,20px)+12px) 20px 16px;display:flex;justify-content:space-between;align-items:center">'+
-        '<div style="font-family:var(--serif);font-style:italic;font-size:16px;color:var(--sand)">Align barcode in frame</div>'+
-        '<button id="cam-close" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.5);color:#fff;font-size:20px;line-height:1;cursor:pointer">\u00d7</button>'+
-      '</div>'+
-      '<div style="position:absolute;bottom:0;left:0;right:0;padding:16px 24px calc(env(safe-area-inset-bottom,0px)+24px);text-align:center">'+
-        '<div id="cam-msg" style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:12px">Starting camera...</div>'+
-        '<button id="cam-manual" style="padding:10px 24px;border-radius:12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">Enter Manually Instead</button>'+
-      '</div>'+
-    '</div>';
-  document.body.appendChild(overlay);
-  document.getElementById('cam-close').addEventListener('click',function(){closeCameraScanner()});
-  document.getElementById('cam-manual').addEventListener('click',function(){closeCameraScanner();openManualEntry()});
-
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false})
-    .then(function(stream){
-      scanCamStream=stream;
-      var video=document.getElementById('cam-video');
-      if(!video){closeCameraScanner();return}
-      video.srcObject=stream;
-      video.play().catch(function(){});
-      var msg=document.getElementById('cam-msg');
-      if(msg)msg.textContent='Hold steady — scanning...';
-      video.addEventListener('playing',function(){startCameraDetection(video)},{once:true});
-    })
-    .catch(function(err){
-      closeCameraScanner();
-      var name=(err&&err.name)||'';
-      if(name==='NotAllowedError'||name==='PermissionDeniedError'){
-        toast('Camera permission denied');
-      }else{
-        toast('Camera unavailable');
-      }
-      setTimeout(openManualEntry,350);
-    });
-}
-
-function startCameraDetection(video){
-  var msg=document.getElementById('cam-msg');
-  if(typeof BarcodeDetector==='undefined'){
-    if(msg){
-      msg.innerHTML='Auto-scan not available on this browser.<br>Use <b>Enter Manually Instead</b> below.';
-      msg.style.color='var(--amber)';
-    }
-    return;
-  }
-  // iOS 17+ supports: ean_13, ean_8, upc_a, upc_e, qr_code, data_matrix
-  // Build detector with supported formats only
-  var fmts=['ean_13','ean_8','upc_a','upc_e','qr_code','code_128','data_matrix'];
-  try{
-    BarcodeDetector.getSupportedFormats().then(function(supported){
-      var use=fmts.filter(function(f){return supported.indexOf(f)>=0});
-      if(!use.length)use=fmts; // fallback: try all
-      try{scanCamDetector=new BarcodeDetector({formats:use})}catch(e){scanCamDetector=new BarcodeDetector()}
-      _runDetectionLoop(video,msg);
-    }).catch(function(){
-      try{scanCamDetector=new BarcodeDetector({formats:fmts})}catch(e){scanCamDetector=new BarcodeDetector()}
-      _runDetectionLoop(video,msg);
-    });
-  }catch(e){
-    if(msg){msg.textContent='Detector error \u2014 use manual entry below';msg.style.color='var(--amber)'}
-  }
-}
-
-function _runDetectionLoop(video,msg){
-  if(msg)msg.textContent='Hold steady and align barcode...';
-  var lastScan=0, attempts=0;
-  function detect(){
-    if(!document.getElementById('cam-overlay'))return;
-    var now=Date.now();
-    // Wait 500ms after start before first detect to let camera stabilise
-    if(now-lastScan>300&&video.readyState>=2){
-      lastScan=now;
-      attempts++;
-      scanCamDetector.detect(video).then(function(codes){
-        if(codes&&codes.length){
-          var code=codes[0].rawValue;
-          haptic('heavy');
-          closeCameraScanner();
-          toast('Barcode captured!');
-          lookupBarcode(code,handleScanResult);
-          return;
-        }
-        // Every 4 seconds with no scan, remind user
-        if(attempts>0&&attempts%20===0&&msg){
-          msg.textContent='Align barcode within the frame and hold still';
-        }
-      }).catch(function(){});
-    }
-    scanCamRAF=requestAnimationFrame(detect);
-  }
-  // Grace period before starting loop
+function toast(msg){
+  var t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:calc(var(--safe-b)+80px);left:50%;transform:translateX(-50%);background:rgba(30,25,15,.95);color:var(--cream);padding:10px 18px;border-radius:20px;font-size:13px;z-index:999;pointer-events:none;white-space:nowrap;border:1px solid rgba(212,168,83,.2);font-family:var(--sans);letter-spacing:.3px;backdrop-filter:blur(8px)';
+  t.textContent=msg;
+  document.body.appendChild(t);
   setTimeout(function(){
-    if(document.getElementById('cam-overlay')){
-      scanCamRAF=requestAnimationFrame(detect);
-    }
-  },800);
+    t.style.transition='opacity .3s';
+    t.style.opacity='0';
+    setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},300);
+  },1800);
 }
 
-function closeCameraScanner(){
-  if(scanCamRAF){cancelAnimationFrame(scanCamRAF);scanCamRAF=null}
-  if(scanCamStream){try{scanCamStream.getTracks().forEach(function(t){t.stop()})}catch(e){}scanCamStream=null}
-  scanCamDetector=null;
-  var o=document.getElementById('cam-overlay');if(o)o.remove();
-}
-
-function openManualEntry(){
-  var overlay=document.createElement('div');
-  overlay.id='me-sheet';
-  overlay.className='sheet-overlay';
-  overlay.innerHTML=
-    '<div class="sheet">'+
-      '<div class="sheet-handle"></div>'+
-      '<div class="sheet-title">Barcode Lookup</div>'+
-      '<div class="sheet-sub">Enter number from your bag</div>'+
-      '<input class="fi" id="me-in" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 850000000000" style="letter-spacing:2px;margin-bottom:8px">'+
-      '<div id="me-st" style="font-size:11px;color:var(--fog);min-height:18px;margin-bottom:14px"></div>'+
-      '<div class="wiz-btns">'+
-        '<button class="btn-g" id="me-cancel">Cancel</button>'+
-        '<button class="btn-p" id="me-submit">Look up</button>'+
-      '</div>'+
-      '<div style="margin-top:14px;font-size:10px;color:var(--fog);text-align:center;line-height:1.6">'+
-        'Looks up bag on Open Food Facts.<br>Works on Netlify or any hosted URL.'+
-      '</div>'+
-    '</div>';
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click',function(e){if(e.target===overlay)closeMe()});
-  document.getElementById('me-cancel').addEventListener('click',closeMe);
-  document.getElementById('me-submit').addEventListener('click',submitMe);
-  var inp=document.getElementById('me-in');
-  inp.addEventListener('input',function(){_meChk(this.value)});
-  inp.addEventListener('keydown',function(e){if(e.key==='Enter'||e.keyCode===13)submitMe()});
-  setTimeout(function(){var i=document.getElementById('me-in');if(i){i.focus();i.click()}},200);
-}
-
-function _meChk(v){
-  var s=document.getElementById('me-st');if(!s)return;
-  var c=v.replace(/\D/g,'');
-  if(c.length>=8){
-    var loc=findBeanByBarcode(c);
-    s.textContent=loc?'\u2713 In library: '+loc.name:'Will search Open Food Facts...';
-    s.style.color=loc?'var(--green)':'var(--fog)';
-  }else if(c.length>0){
-    s.textContent=c.length+'/8+ digits';
-    s.style.color='var(--fog)';
-  }else{
-    s.textContent='';
+function haptic(type){
+  if(!settings.haptics)return;
+  if(navigator.vibrate){
+    if(type==='light')navigator.vibrate(10);
+    else if(type==='med')navigator.vibrate(20);
+    else if(type==='heavy')navigator.vibrate([30,10,30]);
   }
 }
 
-function closeMe(){var e=document.getElementById('me-sheet');if(e)e.remove()}
-
-function submitMe(){
-  var inp=document.getElementById('me-in');
-  var raw=inp?inp.value:'';
-  var code=raw.replace(/\D/g,'').trim();
-  if(!code){toast('Enter a barcode number');return}
-  if(code.length<8){toast('Barcode needs at least 8 digits');return}
-  // Check library first — instant, no network needed
-  var loc=findBeanByBarcode(code);
-  if(loc){
-    closeMe();
-    handleScanResult({barcode:code,found:true,source:'library',beanId:loc.id,name:loc.name,roaster:loc.roaster,origin:loc.origin,roastLevel:loc.roastLevel});
-    return;
-  }
-  // Check built-in specialty coffee DB
-  var dbHit=lookupCoffeeDB(code);
-  if(dbHit){closeMe();handleScanResult(dbHit);return;}
-  // Try Open Food Facts — show waiting state
-  closeMe();
-  // Ensure wizard is visible for the result
-  if(tab!=='new'){
-    tab='new'; step=0;
-    var tabs=document.getElementById('tabs');
-    if(tabs)tabs.style.display='none';
-    var sa=document.getElementById('scroll');
-    sa.innerHTML='<div>'+rNew()+'</div>';
-    sa.scrollTop=0;
-    attachWizEvents();
-  }
-  toast('Searching for bag...');
-  lookupBarcode(code,handleScanResult);
+function sC(s){
+  if(s>=9.5)return'#3DAA72';
+  if(s>=9)return'#5DC090';
+  if(s>=8.5)return'#D4A853';
+  if(s>=8)return'#E8924A';
+  if(s>=7)return'#E8924A';
+  return'#C85040';
 }
 
-function handleScanResult(r){
-  if(!r)return;
-  F.barcode=r.barcode||'';
-  if(r.found){
-    if(r.name)F.bean=r.name;
-    if(r.roaster)F.roaster=r.roaster;
-    if(r.origin)F.origin=r.origin;
-    if(r.roastLevel)F.roastLevel=r.roastLevel;
-    F.beanSource=r.source==='library'?'library':'scan';
-    F.beanId=r.beanId||null;
-    toast(r.source==='library'?'Loaded from library ✔':'Bag recognized — verify details');
-    haptic('med');
-  }else{
-    // Not found in DB - still useful, barcode is stored, user fills manually
-    F.beanSource='scan-unknown';
-    F.beanId=null;
-    if(r.source==='timeout'||r.source==='error'){
-      toast('Network unavailable — fill in bag details');
-    }else{
-      toast('Bag not in database — fill in details below');
-    }
-  }
-  // Ensure we are in the wizard showing step 0
-  if(tab!=='new'){
-    tab='new'; step=0;
-    var tabs=document.getElementById('tabs');
-    if(tabs)tabs.style.display='none';
-    var sa=document.getElementById('scroll');
-    sa.innerHTML='<div>'+rNew()+'</div>';
-    sa.scrollTop=0;
-    attachWizEvents();
-  }else{
-    rr();
-  }
+function scoreWord(s){
+  if(s>=9.5)return'Transcendent';
+  if(s>=9)return'Exceptional';
+  if(s>=8.5)return'Outstanding';
+  if(s>=8)return'Excellent';
+  if(s>=7.5)return'Very Good';
+  if(s>=7)return'Good';
+  if(s>=6)return'Fair';
+  return'Needs Work';
 }
 
-// ─── FORM STATE ────────────────────────────────────────────
-function mkF(){return{
-  // ── Basic ──────────────────────────────────────────────
-  date:new Date().toISOString().slice(0,10),
-  bean:'',roaster:'',origin:'',roastLevel:'Medium',roastDate:'',
-  barcode:'',beanSource:null,beanId:null,
-  // ── Grinder ────────────────────────────────────────────
-  dose:settings.defaultDose,yld:settings.defaultDose*2,
-  grind:'',rpm:settings.defaultRpm||'200',
-  rdt:false,blindShaker:true,
-  basket:'Stock 18g',tamper:'Stock Tamper',
-  epf:false,puckScreen:false,
-  // ── Shot mode ──────────────────────────────────────────
-  shotMode:'time', // 'time' | 'volume' | 'manual'
-  targetTime:26,   // seconds (time mode)
-  targetVol:36,    // ml (volume mode)
-  // ── Profile stages ─────────────────────────────────────
-  profileType:'classic',  // 'classic'|'pre-infusion'|'ramp-up'|'ramp-down'|'blooming'|'custom'
-  // Stage 1 - Pre-infusion
-  preInfOn:true,
-  preInfP:2,       // bar
-  preInfT:4,       // seconds
-  preInfFill:1.0,  // ml/s fill rate
-  // Stage 2 - Main infusion
-  infP:9,          // bar
-  infT:26,         // seconds (total shot time incl pre-inf)
-  infFill:2.0,     // ml/s
-  // Stage 3 - Ramp down / transition (optional)
-  rampOn:false,
-  rampToP:6,       // bar target
-  rampT:5,         // seconds for ramp
-  rampFill:1.5,    // ml/s during ramp
-  // Stage 4 - Bloom (for filter-style / blooming espresso)
-  bloomOn:false,
-  bloomP:1.5,      // bar
-  bloomT:30,       // seconds bloom time
-  // ── Machine ────────────────────────────────────────────
-  brewTemp:settings.defaultTemp||93,
-  water:settings.waterPref||'Third Wave Water',
-  drink:'Espresso',milkOz:0,milkType:'Whole Milk',
-  // ── Taste ──────────────────────────────────────────────
-  aroma:7,acidity:7,sweetness:7,body:7,bitterness:5,finish:7,overall:8,
-  puckCond:'Clean',extraction:'Balanced',
-  // ── Notes ──────────────────────────────────────────────
-  notes:'',adjustNext:'',
-  // ── Actual result ──────────────────────────────────────
-  actualTime:null,  // filled after pull
-  actualVol:null,
-  actualYld:null
-}}
-var F=mkF(),step=0,tab='log',viewing=null,delId=null,delType='shot',searchQ='',sortMode='date';
+function calcStreak(){
+  if(!shots.length)return 0;
+  var dates=shots.map(function(s){return s.date}).filter(function(d,i,a){return a.indexOf(d)===i}).sort().reverse();
+  var streak=0;
+  var check=new Date().toISOString().slice(0,10);
+  for(var i=0;i<dates.length;i++){
+    if(dates[i]===check){streak++;var d=new Date(check);d.setDate(d.getDate()-1);check=d.toISOString().slice(0,10);}
+    else break;
+  }
+  return streak;
+}
 
-// ─── ROUTING ───────────────────────────────────────────────
-function go(t){
-  tab=t;viewing=null;haptic('light');
-  document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('on')});
-  var btn=el('tab-'+t);if(btn)btn.classList.add('on');
-  if(t==='new'){F=mkF();step=0}
-  var sa=el('scroll'),fns={log:rLog,'new':rNew,detail:rDetail,diary:rDiary,compare:rCompare,stats:rStats,guide:rGuide,settings:rSettings,passport:rPassport};
-  sa.innerHTML='<div style="animation:fadeUp .4s ease both">'+(fns[t]?fns[t]():'')+'</div>';
+// ── STORAGE HELPERS ─────────────────────────────────────────────────
+function _g(k,def){
+  if(!_storageOk)return def;
+  try{var v=_l.getItem(k);return v!=null?v:def;}catch(e){return def;}
+}
+function _s(k,v){
+  if(!_storageOk)return;
+  try{_l.setItem(k,v);}catch(e){_storageOk=false;}
+}
+function _del(k){
+  if(!_storageOk)return;
+  try{_l.removeItem(k);}catch(e){}
+}
+
+function svShots(){_s(SK,JSON.stringify(shots));}
+function svDiary(){_s(DK,JSON.stringify(diary));}
+function sSt(){_s(STK,JSON.stringify(settings));}
+function svBeans(){_s(BK,JSON.stringify(beans));}
+function svEq(){_s(EK,JSON.stringify(userEq));}
+
+function rr(){
+  var sa=el('scroll');if(!sa)return;
+  sa.innerHTML='<div style="animation:fadeUp .4s ease both">'+rNew()+'</div>';
   sa.scrollTop=0;
-  if(t==='log'&&shots.length)renderCards();
-  if(t==='settings')attachSettingsEvents()
+  attachWizEvents();
 }
-function showDetail(id){viewing=null;shots.forEach(function(s){if(s.id===id)viewing=s});tab='detail';haptic('light');var sa=el('scroll');sa.innerHTML='<div style="animation:fadeUp .4s ease both">'+rDetail()+'</div>';sa.scrollTop=0}
-function backLog(){viewing=null;go('log')}
 
-// ─── TAB WIRING ────────────────────────────────────────────
-el('tab-log').addEventListener('click',function(){go('log')});
-el('tab-stats').addEventListener('click',function(){go('stats')});
-el('tab-new').addEventListener('click',function(){go('new')});
-el('tab-passport').addEventListener('click',function(){go('passport')});
-el('tab-settings').addEventListener('click',function(){go('settings')});
-el('modal-keep').addEventListener('click',cModal);
-el('modal-del').addEventListener('click',confirmDel);
+// ── NAVIGATION ───────────────────────────────────────────────────────
+var tab='log', viewing=null, step=0, logMode='quick';
+var F={};
 
-// ─── LOG SCREEN ────────────────────────────────────────────
+function backLog(){
+  var tabs=el('tabs');if(tabs)tabs.style.display='grid';
+  viewing=null;
+  go('log');
+}
+
+function showDetail(id){
+  var s=shots.find(function(x){return x.id===id;});
+  if(!s)return;
+  viewing=s;
+  tab='detail';
+  var sa=el('scroll');if(!sa)return;
+  sa.innerHTML='<div style="animation:fadeUp .4s ease both">'+rDetail()+'</div>';
+  sa.scrollTop=0;
+  attachDetailEvents();
+}
+
+function showShotById(id){showDetail(id);}
+
+function oModal(id,type){
+  delId=id;delType=type;
+  var mt=el('m-title'),ms=el('m-sub'),mo=el('modal');
+  if(!mt||!ms||!mo)return;
+  if(type==='shot'){mt.textContent='Delete this shot?';ms.textContent='This cannot be undone.';}
+  else if(type==='diary'){mt.textContent='Delete diary entry?';ms.textContent='This cannot be undone.';}
+  else{mt.textContent='Clear everything?';ms.textContent='All shots, beans, diary entries. Cannot be undone.';}
+  mo.classList.add('open');
+}
+
+function deleteShot(id){
+  shots=shots.filter(function(s){return s.id!==id;});
+  svShots();
+  deleteShotImage(id);
+  backLog();
+}
+
+// ── RENDER: LOG ───────────────────────────────────────────────────────
 function rLog(){
-  var n=shots.length,avgS=n?(shots.reduce(function(s,x){return s+x.overall},0)/n).toFixed(1):null,topS=n?Math.max.apply(null,shots.map(function(s){return s.overall})):null,avgT=n?Math.round(shots.reduce(function(s,x){return s+x.infT},0)/n):null,streak=calcStreak();
-  var h='<div class="hero"><div class="hero-bg"></div><div class="hero-top"><div><div style="font-size:9px;letter-spacing:3px;color:var(--fog);text-transform:uppercase;margin-bottom:4px">'+greet()+'</div><div class="hero-mark">Pull</div></div>';
-  if(n)h+='<div style="text-align:right"><div style="font-family:var(--serif);font-size:32px;color:var(--white);line-height:1">'+n+'</div><div style="font-size:8px;letter-spacing:2px;color:var(--fog);text-transform:uppercase">Shots</div></div>';
-  h+='</div><div class="score-center">';
-  if(n){h+='<div class="score-num" style="color:'+sC(parseFloat(avgS))+'">'+avgS+'</div><div class="score-lbl">Average Score</div><div class="score-desc">'+scoreWord(parseFloat(avgS))+'</div><div class="stat-row"><div class="stat-cell" id="stat-best"><span class="sv" style="color:'+sC(topS)+'">'+topS+'</span><span class="sk">Best</span></div><div class="stat-cell"><span class="sv">'+streak+'</span><span class="sk">Streak</span></div><div class="stat-cell"><span class="sv">'+avgT+'s</span><span class="sk">Avg Brew</span></div></div>'}
-  else{h+='<div class="empty"><div class="empty-icon">\u2615</div><div class="empty-title">Pull your first shot</div><div class="empty-sub">Every great espresso journey begins with a single pull.</div><button class="cta" id="cta-log">Log a shot</button><button class="cta-sec" id="cta-scan">Scan a bag</button></div>'}
-  h+='</div></div>';
-  if(!n)return h;
-  var today=new Date().toISOString().slice(0,10),last7=[],sd={};
-  for(var i=0;i<7;i++)last7.push(new Date(Date.now()-(6-i)*864e5).toISOString().slice(0,10));
-  shots.forEach(function(s){sd[s.date]=1});
-  var dots='';last7.forEach(function(d){dots+='<div class="sdot'+(d===today?' t':sd[d]?' a':'')+'"></div>'});
-  h+='<div class="streak"><div class="streak-left"><span style="font-size:20px">'+(streak>=7?'\ud83d\udd25':streak>=3?'\u26a1':'\u2615')+'</span><div><div class="streak-n">'+streak+'</div><div class="streak-t">Day Streak</div></div></div><div class="streak-dots">'+dots+'</div></div>';
-  var tip=coachTip();if(tip)h+='<div class="coach"><div class="coach-lbl">'+tip.l+'</div><div class="coach-txt">'+tip.t+'</div></div>';
-  h+='<div class="sec-hdr"><div class="sec-title">Recent Pulls</div><div class="sec-count" id="log-cnt">'+n+' shots</div></div><div class="sec-rule"></div>';
-  h+='<div class="search-wrap"><input class="search-in" id="search-in" placeholder="Search beans, notes..." value="'+searchQ+'"></div>';
-  h+='<div class="filters"><div class="fchip'+(sortMode==='date'?' on':'')+'" id="sort-date">Latest</div><div class="fchip'+(sortMode==='score'?' on':'')+'" id="sort-score">Top Rated</div></div>';
-  h+='<div id="cards" style="padding-bottom:16px"></div>';
-  return h
+  var n=shots.length;
+  var avgS=n?(shots.reduce(function(s,x){return s+x.overall},0)/n).toFixed(1):null;
+  var topS=n?Math.max.apply(null,shots.map(function(s){return s.overall})):null;
+  var streak=calcStreak();
+
+  var h='<div class="page-hdr">';
+  h+='<div class="page-eyebrow">Pull \u00b7 '+(n?n+' shot'+(n!==1?'s':''):'Your shot journal')+'</div>';
+  h+='<div class="page-title">Shot Log</div>';
+  if(n){
+    h+='<div class="log-stats-row">';
+    h+='<div class="log-stat"><span class="log-stat-v" style="color:'+sC(parseFloat(avgS))+'">'+avgS+'</span><span class="log-stat-k">Avg</span></div>';
+    h+='<div class="log-stat"><span class="log-stat-v" style="color:'+sC(topS)+'">'+topS+'</span><span class="log-stat-k">Best</span></div>';
+    h+='<div class="log-stat"><span class="log-stat-v">'+streak+'</span><span class="log-stat-k">Streak</span></div>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  if(!n){
+    h+='<div class="empty-state"><div class="empty-icon">\u2615</div>';
+    h+='<div class="empty-title">Your first shot awaits</div>';
+    h+='<div class="empty-sub">Tap + to log your first espresso shot</div></div>';
+    return h;
+  }
+
+  h+='<div id="cards-container"></div>';
+  return h;
 }
-function attachLogEvents(){
-  var si=el('search-in');if(si)si.addEventListener('input',function(){searchQ=this.value;renderCards()});
-  var sd=el('sort-date');if(sd)sd.addEventListener('click',function(){sortMode='date';renderCards();this.className='fchip on';var ss=el('sort-score');if(ss)ss.className='fchip'});
-  var ss=el('sort-score');if(ss)ss.addEventListener('click',function(){sortMode='score';renderCards();this.className='fchip on';var sd=el('sort-date');if(sd)sd.className='fchip'});
-  var sb=el('stat-best');if(sb)sb.addEventListener('click',function(){go('stats')});
-  var cl=el('cta-log');if(cl)cl.addEventListener('click',function(){go('new')});
-  var cs=el('cta-scan');if(cs)cs.addEventListener('click',quickScan);
-}
+
 function renderCards(){
-  var list=shots.slice();
-  if(searchQ){var q=searchQ.toLowerCase();list=list.filter(function(s){return(s.bean||'').toLowerCase().indexOf(q)>=0||(s.roaster||'').toLowerCase().indexOf(q)>=0||(s.notes||'').toLowerCase().indexOf(q)>=0})}
-  if(sortMode==='score')list.sort(function(a,b){return b.overall-a.overall});else list.sort(function(a,b){return b.date.localeCompare(a.date)});
-  var w=el('cards');if(!w)return;
-  var cnt=el('log-cnt');if(cnt)cnt.textContent=list.length+(list.length!==shots.length?' of '+shots.length:'')+' shots';
+  var container=el('cards-container');
+  if(!container)return;
   var h='';
-  list.forEach(function(s,i){
-    var sc=sC(s.overall),tags='';
-    if(s.barcode)tags+='<span class="ctag" style="background:rgba(212,168,83,.12);color:var(--gold)">\ud83d\udcf7 Scanned</span>';
+  shots.slice(0,50).forEach(function(s){
+    var sc2=sC(s.overall);
+    var tags='';
     if(s.epf)tags+='<span class="ctag" style="background:rgba(61,170,114,.1);color:#5DC090">EPF</span>';
     if(s.puckScreen)tags+='<span class="ctag" style="background:rgba(74,128,208,.1);color:#7AA8D8">Screen</span>';
     if(s.rdt)tags+='<span class="ctag" style="background:rgba(212,168,83,.08);color:var(--gold)">RDT</span>';
-    // Bean age tag
+    if(s.barcode)tags+='<span class="ctag" style="background:rgba(212,168,83,.12);color:var(--gold)">\uD83D\uDCF7 Scanned</span>';
     var _age=getBeanAgingForShot(s);
     if(_age){
       var _ageRd=s.roastDate||(s.beanId&&findBeanById(s.beanId)&&findBeanById(s.beanId).roastDate);
       if(_ageRd){
-        var _ageDays=Math.floor((new Date(s.date).getTime()-new Date(_ageRd).getTime())/864e5);
+        var _ageDays=Math.floor((new Date(s.date+'T12:00:00')-new Date(_ageRd+'T12:00:00'))/864e5);
         if(!isNaN(_ageDays)&&_ageDays>=0){
           var _ageBg=_ageDays>=7&&_ageDays<=21?'rgba(61,170,114,.1)':_ageDays>21&&_ageDays<=35?'rgba(232,146,74,.1)':'rgba(200,80,64,.1)';
           var _ageColor=_ageDays>=7&&_ageDays<=21?'#5DC090':_ageDays>21&&_ageDays<=35?'var(--amber)':'var(--red)';
@@ -1532,132 +745,194 @@ function renderCards(){
         }
       }
     }
-    h+='<div class="card" style="animation-delay:'+(i*.05)+'s" data-sid="'+s.id+'"><span class="card-bar" style="background:'+sc+'"></span><div class="card-inner"><div class="card-top"><div><div class="card-bean">'+(s.bean||'Unnamed')+'</div><div class="card-meta">'+(s.roaster||'')+(s.origin?' \u00b7 '+s.origin:'')+' \u00b7 '+s.date+'</div></div><div class="card-score"><span class="card-sn" style="color:'+sc+'">'+s.overall+'</span><span class="card-sl">Score</span></div></div>';
+    h+='<div class="card" data-id="'+s.id+'">';
+    h+='<div class="card-top">';
+    h+='<div><div class="card-bean">'+(s.bean||'Unnamed')+'</div>';
+    h+='<div class="card-meta">'+(s.roaster||'Unknown roaster')+' \u00b7 '+s.date+'</div>';
     if(tags)h+='<div class="card-tags">'+tags+'</div>';
-    h+='<div class="card-params"><div class="card-p"><span class="card-pv">'+(s.grind||'\u2014')+'</span><span class="card-pk">Grind</span></div><div class="card-p"><span class="card-pv">'+s.dose+'g</span><span class="card-pk">Dose</span></div><div class="card-p"><span class="card-pv">'+s.infT+'s</span><span class="card-pk">Time</span></div><div class="card-p"><span class="card-pv">'+s.brewTemp+'\u00b0</span><span class="card-pk">Temp</span></div></div>';
-    if(s.notes)h+='<div class="card-note">'+(s.notes.length>70?s.notes.slice(0,70)+'\u2026':s.notes)+'</div>';
-    h+='</div></div>'
+    h+='</div>';
+    h+='<div class="card-score" style="color:'+sc2+'">'+s.overall+'</div>';
+    h+='</div>';
+    h+='<div class="card-params">';
+    h+='<span class="cp">'+s.grind+'</span><span class="cpl">Grind</span>';
+    h+='<span class="cp">'+s.dose+'g</span><span class="cpl">Dose</span>';
+    h+='<span class="cp">'+s.yld+'g</span><span class="cpl">Yield</span>';
+    h+='<span class="cp">'+s.infT+'s</span><span class="cpl">Time</span>';
+    h+='</div>';
+    if(s.notes)h+='<div class="card-notes">\u201c'+s.notes.slice(0,80)+(s.notes.length>80?'\u2026':'')+'\u201d</div>';
+    h+='</div>';
   });
-  w.innerHTML=h;
-  w.querySelectorAll('.card[data-sid]').forEach(function(c){c.addEventListener('click',function(){showDetail(c.dataset.sid)})});
+  container.innerHTML=h;
+  attachLogEvents();
 }
-function quickScan(){F=mkF();step=0;tab='new';var tabs=document.getElementById('tabs');if(tabs)tabs.style.display='none';el('scroll').innerHTML='<div>'+rNew()+'</div>';attachWizEvents();setTimeout(function(){startScan(handleScanResult)},200)}
-function coachTip(){
-  if(!shots.length)return null;
-  var lastShot=shots[0];
-  if(lastShot&&lastShot.roastDate){
-    var days=Math.floor((Date.now()-new Date(lastShot.roastDate).getTime())/864e5);
-    if(!isNaN(days)&&days>=0){
-      if(days<=4)return{l:'Bean Age — Day '+days,t:'Too fresh for espresso. CO₂ causes channeling. Best from day 7.'};
-      if(days>=36)return{l:'Bean Age — Day '+days,t:'Past prime. Expect flat extraction. Consider a fresh bag.'};
-      if(days>=7&&days<=14)return{l:'Bean Age — Day '+days,t:'Prime espresso window. Peak extraction. Pull now.'};
-    }
-  }
-  if(shots.length<2)return null;
-  var insights=getPatternInsights();
-  if(insights&&insights.length)return{l:insights[0].icon+' '+insights[0].title,t:insights[0].body};
-  var gs=getGrindSuggestion();
-  if(gs)return{l:'Grind Pattern',t:gs};
-  var r=shots.slice(0,5),ar=avg(r.map(function(s){return s.overall}));
-  if(avg(r.map(function(s){return s.bitterness}))>=7)return{l:'Dial Suggestion',t:'Bitterness averaging high. Try '+grinderAdjust('coarser')+' on '+grinderName()+'. Or drop temp 1°C.'};
-  if(avg(r.map(function(s){return s.sweetness}))<6.5)return{l:'Sweetness Alert',t:'Sweetness low. Try finer or add EPF filter.'};
-  if(ar>=9)return{l:'On Form',t:'Recent avg: '+ar.toFixed(1)+'. Outstanding.'};
-  return{l:'Keep Dialing',t:'Recent avg: '+ar.toFixed(1)+'.'};}
 
-// ─── DETAIL VIEW ───────────────────────────────────────────
+function attachLogEvents(){
+  document.querySelectorAll('.card[data-id]').forEach(function(card){
+    card.addEventListener('click',function(){showDetail(card.dataset.id);});
+  });
+}
+
+// ── SAVE SETTINGS ─────────────────────────────────────────────────────
+function saveSt(){
+  var v;
+  if((v=gv('s-name'))!==null)settings.userName=v;
+  if((v=gv('s-dose'))!==null)settings.defaultDose=parseFloat(v)||18;
+  if((v=gv('s-temp'))!==null)settings.defaultTemp=parseFloat(v)||93;
+  if((v=gv('s-apikey'))!==null)settings.anthropicKey=v.trim();
+  if((v=gv('s-proxyurl'))!==null)settings.proxyUrl=v.trim();
+  sSt();
+  toast('Saved');
+}
+
+
 function rDetail(){
-  var s=viewing;if(!s)return'';
-  var sc=sC(s.overall),ratio=(s.yld/s.dose).toFixed(2),linked=null;
-  diary.forEach(function(d){if(d.shotId===s.id)linked=d});
-  var gear=[];if(s.blindShaker)gear.push('Blind Shaker');if(s.epf)gear.push('EPF Filter');if(s.puckScreen)gear.push('Puck Screen');if(s.rdt)gear.push('RDT');
-  var rank=shots.slice().sort(function(a,b){return b.overall-a.overall}).findIndex(function(x){return x.id===s.id})+1;
-  var shotNum=shots.length-shots.findIndex(function(x){return x.id===s.id});
-  var dateLong=new Date(s.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  var h='<div class="dtl-mast"><div class="dtl-mast-top"><div class="dtl-back" id="dtl-back">\u2039 Log</div><div class="dtl-mast-center"><div class="dtl-folio">Shot No. '+String(shotNum).padStart(3,'0')+'</div><div class="dtl-date">'+dateLong+'</div></div><button class="dtl-share" id="dtl-share">\u2191</button></div></div><div class="dtl-rule"></div>';
-  h+='<div class="dtl-hero"><div class="dtl-glow" style="background:'+sc+'"></div><div class="dtl-eyebrow">\u2039 '+(s.roaster||'Unbranded')+' \u203a</div><div class="dtl-headline">'+(s.bean||'Unnamed')+'</div><div class="dtl-deck">'+scoreWord(s.overall)+(s.origin?'. <em style="color:var(--cream)">'+s.origin+'</em>':'')+'.</div>';
-  h+='<div class="dtl-score-panel"><div class="dtl-score-lbl">Score</div><div class="dtl-score-big" style="color:'+sc+'">'+s.overall+'</div><div class="dtl-score-sub">out of 10</div>';
-  if(rank<=3)h+='<div class="dtl-score-rank">'+['1st','2nd','3rd'][rank-1]+' Best</div>';
-  h+='</div><div class="dtl-meta"><div class="dtl-mc"><span class="dtl-mv">'+s.roastLevel+'</span><span class="dtl-mk">Roast</span></div><div class="dtl-mc"><span class="dtl-mv">'+s.drink+'</span><span class="dtl-mk">Drink</span></div><div class="dtl-mc"><span class="dtl-mv">1:'+ratio+'</span><span class="dtl-mk">Ratio</span></div></div></div>';
-  h+='<div class="dtl-body"><div class="dtl-col"><span class="dtl-col-n">I.</span><span class="dtl-col-t">The Recipe</span></div><div class="rec-card"><div class="rec-hero"><div class="rec-hero-v">'+(s.grind||'\u2014')+'</div><div class="rec-hero-l">Grind \u00b7 '+s.rpm+' RPM</div></div>';
-  var recipe=[['Dose',s.dose+'g'],['Yield',s.yld+'g'],['Ratio','1:'+ratio],['Time',s.infT+'s'],['Temp',s.brewTemp+'\u00b0C'],['Profile',s.profileType||'classic'],['Pre-inf',s.preInfT+'s @ '+s.preInfP+' bar'],['Main',s.infP+' bar'],['Water',s.water]];
-  if(s.milkOz>0)recipe.push(['Milk',s.milkOz+'oz '+s.milkType]);
-  recipe.forEach(function(r){h+='<div class="rec-row"><span class="rec-k">'+r[0]+'</span><span class="rec-dot"></span><span class="rec-v">'+r[1]+'</span></div>'});
+  var s=viewing;
+  if(!s)return'<div class="page-hdr"><div class="page-title">Shot not found</div></div>';
+  var ratio=(s.yld/s.dose).toFixed(2);
+  var shotNum=shots.length-shots.indexOf(s);
+  var aging=getBeanAgingForShot(s);
+
+  var h='<div class="dtl-wrap">';
+  // Header
+  h+='<div class="dtl-hdr">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between">';
+  h+='<button class="dtl-back" id="dtl-back">\u2190</button>';
+  h+='<div style="display:flex;gap:8px">';
+  h+='<button class="dtl-share" id="dtl-share">\u2191</button>';
+  h+='</div></div>';
+  h+='<div class="dtl-score" style="color:'+sC(s.overall)+'">'+s.overall+'</div>';
+  h+='<div class="dtl-score-word">'+scoreWord(s.overall)+'</div>';
+  h+='<div class="dtl-bean">'+(s.bean||'Unnamed')+'</div>';
+  h+='<div class="dtl-meta">'+(s.roaster||'')+(s.origin?' \u00b7 '+s.origin:'')+'</div>';
   h+='</div>';
-  h+='<div class="dtl-col"><span class="dtl-col-n">II.</span><span class="dtl-col-t">Setup</span></div>';
-  h+='<div style="display:flex;align-items:baseline;gap:12px;padding:12px 0;border-bottom:1px solid var(--edge)"><span style="font-size:9px;letter-spacing:2.5px;color:var(--fog);text-transform:uppercase;font-weight:600;min-width:50px">Puck</span><span style="font-family:var(--serif);font-size:15px;color:var(--cream)">'+s.puckCond+' \u00b7 '+s.extraction+'</span></div>';
-  if(gear.length){h+='<div class="dtl-gear">';gear.forEach(function(g){h+='<span class="dtl-gc">'+g+'</span>'});h+='</div>'}
-  if(s.barcode)h+='<div style="font-size:10px;color:var(--fog);padding:8px 0">\ud83d\udcf7 <code style="color:var(--gold);background:rgba(212,168,83,.08);padding:2px 6px;border-radius:5px">'+s.barcode+'</code></div>';
-  h+='<div class="dtl-col"><span class="dtl-col-n">III.</span><span class="dtl-col-t">Taste Profile</span></div>';
-  h+='<div class="radar-wrap">'+radarSVG(s,180)+'</div>';
-  var barC={aroma:'#D4A853',acidity:'#4A80D0',sweetness:'#3DAA72',body:'#A06838',bitterness:'#C85040',finish:'#D4A853'};
-  ['aroma','acidity','sweetness','body','bitterness','finish'].forEach(function(k){h+='<div class="taste-row"><div class="taste-hdr"><span class="taste-nm">'+k.toUpperCase()+'</span><span class="taste-vl" style="color:'+sC(s[k])+'">'+s[k]+'</span></div><div class="taste-trk"><div class="taste-fill" style="width:'+(s[k]*10)+'%;background:'+(barC[k]||'var(--gold)')+'"></div></div></div>'});
-  if(s.notes)h+='<div class="pullquote"><div class="pq-mark">\u201c</div><div class="pq-text">'+s.notes+'</div><div class="pq-attr">\u2014 Tasting notes</div></div>';
-  if(s.adjustNext)h+='<div class="dtl-note dtl-note-a"><div class="dtl-note-lbl" style="color:var(--amber)">Note to self</div><div class="dtl-note-txt" style="color:var(--sand)">'+s.adjustNext+'</div></div>';
-  var bageDetail=getBeanAgingForShot(s);
-  if(bageDetail)h+='<div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--edge);font-size:12px;color:var(--fog);margin-bottom:14px">🌿 '+bageDetail+'</div>';
-  var gdet=getDetailedSuggestion(s);
-  if(gdet)h+='<div class="dtl-note dtl-note-g"><div class="dtl-note-lbl" style="color:var(--gold)">Next shot</div><div class="dtl-note-txt" style="color:var(--sand)">'+gdet+'</div></div>';
-  // AI Dial-In Coach panel
-  h+='<div class="ai-panel" id="ai-panel-'+s.id+'"><div class="ai-panel-glow"></div><div class="ai-label"><div class="ai-label-dot"></div>Dial-In Coach</div><button class="ai-btn" id="ai-btn-'+s.id+'">Get AI coaching for next shot</button></div>';
-  if(linked)h+='<div class="dtl-note dtl-note-g"><div class="dtl-note-lbl" style="color:var(--gold)">From the diary</div><div class="dtl-note-txt" style="color:var(--cream)">'+linked.entry+'</div></div>';
-  else h+='<div style="padding:14px 0;text-align:center"><button class="ghost-btn" id="dtl-add-diary">+ Add diary entry</button></div>';
-  // ── Extraction Card (Bookoo PNG) ─────────────────────────────
+
+  // Params grid
+  h+='<div class="dtl-params">';
+  h+='<div class="dtl-param"><span class="dtl-pv">'+(s.grind||'\u2014')+'</span><span class="dtl-pk">Grind</span></div>';
+  h+='<div class="dtl-param"><span class="dtl-pv">'+s.dose+'g</span><span class="dtl-pk">Dose</span></div>';
+  h+='<div class="dtl-param"><span class="dtl-pv">'+s.yld+'g</span><span class="dtl-pk">Yield</span></div>';
+  h+='<div class="dtl-param"><span class="dtl-pv">'+s.infT+'s</span><span class="dtl-pk">Time</span></div>';
+  h+='</div>';
+  h+='<div class="dtl-rule"></div>';
+
+  // Recipe details
+  h+='<div class="dtl-recipe">';
+  h+='<div class="dtl-row"><span class="dtl-rk">Ratio</span><span class="dtl-rv">1:'+ratio+'</span></div>';
+  h+='<div class="dtl-row"><span class="dtl-rk">Temp</span><span class="dtl-rv">'+s.brewTemp+'\u00b0C</span></div>';
+  h+='<div class="dtl-row"><span class="dtl-rk">Roast Level</span><span class="dtl-rv">'+s.roastLevel+'</span></div>';
+  h+='<div class="dtl-row"><span class="dtl-rk">Water</span><span class="dtl-rv">'+s.water+'</span></div>';
+  if(s.preInfOn){
+    h+='<div class="dtl-row"><span class="dtl-rk">Pre-Infusion</span><span class="dtl-rv">'+s.preInfP+'bar / '+s.preInfT+'s</span></div>';
+  }
+  h+='<div class="dtl-row"><span class="dtl-rk">Main Pressure</span><span class="dtl-rv">'+s.infP+' bar</span></div>';
+  h+='</div>';
+  h+='<div class="dtl-rule"></div>';
+
+  // Taste radar
+  h+='<div style="display:flex;justify-content:center;padding:20px 0">'+radarSVG(s,160)+'</div>';
+
+  // Taste scores
+  h+='<div class="dtl-tastes">';
+  [['Aroma',s.aroma,'#D4A853'],['Acidity',s.acidity,'#4A80D0'],['Sweetness',s.sweetness,'#3DAA72'],
+   ['Body',s.body,'#A06838'],['Bitterness',s.bitterness,'#C85040'],['Finish',s.finish,'#D4A853']].forEach(function(t){
+    h+='<div class="dtl-taste-row"><span class="dtl-taste-l">'+t[0]+'</span>';
+    h+='<div class="dtl-taste-bar"><div class="dtl-taste-fill" style="width:'+(t[1]*10)+'%;background:'+t[2]+'"></div></div>';
+    h+='<span class="dtl-taste-v">'+t[1]+'</span></div>';
+  });
+  h+='</div>';
+  h+='<div class="dtl-rule"></div>';
+
+  // Notes
+  if(s.notes){
+    h+='<div class="dtl-notes">';
+    h+='<div class="dtl-notes-label">Notes</div>';
+    h+='<div class="dtl-notes-txt">\u201c'+s.notes+'\u201d</div>';
+    h+='</div>';
+    h+='<div class="dtl-rule"></div>';
+  }
+
+  // Aging
+  if(aging){
+    h+='<div class="dtl-aging" style="background:rgba('+aging.rgb+');border:1px solid rgba('+aging.rgb2+')">';
+    h+='<span style="color:'+aging.color+'">'+aging.msg+'</span>';
+    h+='</div>';
+    h+='<div class="dtl-rule"></div>';
+  }
+
+  // Coach tip
+  var tip=coachTip(s);
+  if(tip){
+    h+='<div class="dtl-col"><span class="dtl-col-n">I.</span><span class="dtl-col-t">Note to self</span></div>';
+    h+='<div class="dtl-coach"><div class="dtl-coach-label">Next Shot</div>';
+    h+='<div class="dtl-coach-txt">'+tip+'</div></div>';
+    h+='<div class="dtl-rule"></div>';
+  }
+
+  // Diary
+  var shotDiary=diary.filter(function(d){return d.shotId===s.id});
+  if(shotDiary.length){
+    h+='<div class="dtl-col"><span class="dtl-col-n">II.</span><span class="dtl-col-t">From the Diary</span></div>';
+    shotDiary.forEach(function(d){
+      h+='<div class="dtl-diary-entry"><div class="dtl-diary-date">'+d.date+'</div>';
+      h+='<div class="dtl-diary-txt">'+d.text+'</div></div>';
+    });
+    h+='<div class="dtl-rule"></div>';
+  }
+
+  // Dial-in coach
+  h+='<div class="dtl-col"><span class="dtl-col-n">III.</span><span class="dtl-col-t">Dial-In Coach</span></div>';
+  var localTip=getLocalCoachingTip(s);
+  if(localTip)h+='<div style="font-size:13px;color:var(--sand);line-height:1.7;padding:0 0 12px;font-family:var(--serif);font-style:italic">'+localTip+'</div>';
+  h+='<button class="ghost-btn" id="dtl-dialin">\u2736 Get AI coaching for next shot</button>';
+  h+='<div class="dtl-rule"></div>';
+
+  // Diary button
+  h+='<div style="text-align:center;padding:8px 0">';
+  h+='<button class="ghost-btn" id="dtl-add-diary">+ Add diary entry</button>';
+  h+='</div>';
+  h+='<div class="dtl-rule"></div>';
+
+  // Extraction card
   var _img=getShotImage(s.id);
   h+='<div class="dtl-col"><span class="dtl-col-n">IV.</span><span class="dtl-col-t">Extraction Card</span></div>';
   if(_img){
     h+='<div style="position:relative;border-radius:16px;overflow:hidden;margin-bottom:14px;border:1px solid var(--edge)">';
     h+='<img src="'+_img+'" style="width:100%;display:block" alt="Extraction card"/>';
-    h+='<button style="position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,.65);color:#fff;font-size:16px;cursor:pointer;backdrop-filter:blur(4px)" id="dtl-del-img">×</button>';
+    h+='<button style="position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,.65);color:#fff;font-size:16px;cursor:pointer" id="dtl-del-img">\u00d7</button>';
     h+='</div>';
   }else{
     h+='<div style="padding:20px 0;text-align:center">';
     h+='<button class="ghost-btn" id="dtl-attach-img">+ Attach Bookoo Extraction Card</button>';
-    h+='<div style="font-size:10px;color:var(--fog);margin-top:6px;line-height:1.5">Import the PNG from your Bookoo app — stored with this shot</div>';
+    h+='<div style="font-size:10px;color:var(--fog);margin-top:6px;line-height:1.5">Import the PNG from your Bookoo app \u2014 stored with this shot</div>';
     h+='</div>';
   }
-  h+='<div class="dtl-colophon"><div class="dtl-col-rule"></div><div class="dtl-col-txt">'+(settings.userName||'Your Pull')+' \u00b7 Shot No. '+String(shotNum).padStart(3,'0')+'</div><button class="dtl-del" id="dtl-dialin" style="width:100%;padding:14px;background:rgba(212,168,83,.08);border:1px solid rgba(212,168,83,.25);border-radius:14px;cursor:pointer;color:var(--gold);font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">✶ Dial-In Assistant</button>';
+
+  // Footer
+  h+='<div class="dtl-colophon"><div class="dtl-col-rule"></div>';
+  h+='<div class="dtl-col-txt">'+(settings.userName||'Your Pull')+' \u00b7 Shot No. '+String(shotNum).padStart(3,'0')+'</div>';
   h+='<button class="dtl-del" id="dtl-delete">Delete this shot</button></div></div>';
-  return h
+
+  return h;
 }
-function attachDetailEvents(){
-  var db=el('dtl-back');if(db)db.addEventListener('click',backLog);
-  var ds=el('dtl-share');if(ds)ds.addEventListener('click',shareShot);
-  var dd=el('dtl-delete');if(dd&&viewing)dd.addEventListener('click',function(){oModal(viewing.id,'shot')});
-  var dad=el('dtl-add-diary');if(dad&&viewing)dad.addEventListener('click',function(){openDiaryForShot(viewing.id)});
-  // AI coaching button
-  var aiBtn=el('ai-btn-'+(viewing?viewing.id:''));
-  if(aiBtn&&viewing){
-    var _aiSid=viewing.id;
-    aiBtn.addEventListener('click',function(){
-      aiBtn.style.display='none';
-      renderAIPanel(_aiSid);
-    });
+
+function getLocalCoachingTip(s){
+  // Local coaching based on taste scores
+  var tips=[];
+  if(s.sweetness<6)tips.push('Sweetness low ('+s.sweetness+'). Try finer or add EPF filter.');
+  if(s.bitterness>7)tips.push('Bitterness high ('+s.bitterness+'). Try coarser or shorter extraction.');
+  if(s.acidity>8)tips.push('Acidity high. Try coarser grind or lower temp.');
+  if(s.body<5)tips.push('Body thin. Try finer grind or higher dose.');
+  // Recent trend
+  var recent=shots.filter(function(x){return x.bean===s.bean&&x.id!==s.id}).slice(0,3);
+  if(recent.length>=3){
+    var avgGrind=avg(recent.map(function(x){return parseFloat(x.grind)||0}));
+    if(avgGrind>0){
+      tips.push((recent.length)+'+ shots at grind averaging '+avgGrind.toFixed(1)+'. Try a bigger grind change.');
+    }
   }
-  // Extraction card attach button
-  var dai=el('dtl-attach-img');
-  if(dai&&viewing){
-    var _sid=viewing.id;
-    dai.addEventListener('click',function(){
-      attachImageToShot(_sid,function(){showDetail(_sid)});
-    });
-  }
-  // Extraction card delete button
-  var ddi=el('dtl-del-img');
-  if(ddi&&viewing){
-    var _sid2=viewing.id;
-    ddi.addEventListener('click',function(){
-      deleteShotImage(_sid2);
-      toast('Extraction card removed');
-      showDetail(_sid2);
-    });
-  }
-  // Dial-In AI assistant button
-  var ddi2=el('dtl-dialin');
-  if(ddi2&&viewing){
-    var _shotRef=viewing;
-    ddi2.addEventListener('click',function(){openDialIn(_shotRef);});
-  }
+  return tips.slice(0,2).join(' ');
 }
+
 function shareShot(){
   if(!viewing)return;
   var s=viewing;
@@ -4034,6 +3309,28 @@ if(saved){ F.beanId = saved.id; bumpBean(saved.id); }
 }
 return true;
 }
+
+// ── ORIGINAL go() FUNCTION ─────────────────────────────────────────────
+function go(t){
+tab=t;viewing=null;haptic(‘light’);
+document.querySelectorAll(’.tb’).forEach(function(b){b.classList.remove(‘on’)});
+var btn=el(‘tab-’+t);if(btn)btn.classList.add(‘on’);
+if(t===‘new’){F=mkF();step=0;}
+var sa=el(‘scroll’);
+var fns={log:rLog,‘new’:rNew,detail:rDetail,diary:rDiary,compare:rCompare,
+stats:rStats,guide:rGuide,settings:rSettings,passport:rPassport};
+if(sa)sa.innerHTML=’<div style="animation:fadeUp .4s ease both">’+(fns[t]?fns[t]():’’)+’</div>’;
+if(sa)sa.scrollTop=0;
+var tabs=el(‘tabs’);
+if(tabs)tabs.style.display=(t===‘new’?‘none’:‘grid’);
+if(t===‘log’&&shots.length)setTimeout(renderCards,10);
+if(t===‘settings’)setTimeout(attachSettingsEvents,10);
+if(t===‘stats’)setTimeout(attachStatsEvents,10);
+if(t===‘diary’)setTimeout(attachDiaryEvents,10);
+if(t===‘compare’)setTimeout(attachCompareEvents,10);
+if(t===‘passport’)setTimeout(attachPassportEvents,10);
+}
+
 // ── UNIFIED go() — single override, no recursion ──────────────────
 var _baseGo=go;
 go=function(t){
@@ -4695,7 +3992,10 @@ go(‘log’);
 if(shouldShowMorning())setTimeout(renderMorning,300)
 }
 }catch(e){
-el(‘scroll’).innerHTML=’<div style="padding:60px 32px;text-align:center"><div style="font-family:var(--serif);font-size:28px;color:var(--white);margin-bottom:12px">Pull</div><div style="color:var(--fog);font-size:13px;line-height:1.6">Startup error: ‘+e.message+’</div></div>’
+try{go(‘log’);}catch(e2){
+el(‘scroll’).innerHTML=’<div style="padding:60px 32px;text-align:center"><div style="font-family:var(--serif);font-size:28px;color:var(--white);margin-bottom:12px">Pull</div><div style="color:var(--fog);font-size:13px;line-height:1.6">Tap to continue</div></div>’;
+el(‘scroll’).addEventListener(‘click’,function(){try{go(‘log’);}catch(e3){}});
+}
 }
 })();
 </script>
