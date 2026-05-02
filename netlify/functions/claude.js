@@ -1,32 +1,44 @@
 exports.handler = async function(event) {
-const h = {
+var headers = {
 ‘Access-Control-Allow-Origin’: ‘*’,
 ‘Access-Control-Allow-Headers’: ‘Content-Type’,
 ‘Content-Type’: ‘application/json’
 };
-if (event.httpMethod === ‘OPTIONS’) return { statusCode: 200, headers: h, body: ‘’ };
-if (event.httpMethod !== ‘POST’) return { statusCode: 405, headers: h, body: ‘{“error”:“POST only”}’ };
 
-const key = process.env.ANTHROPIC_API_KEY;
-if (!key) return { statusCode: 500, headers: h, body: ‘{“error”:{“message”:“ANTHROPIC_API_KEY not set”}}’ };
+if (event.httpMethod === ‘OPTIONS’) {
+return { statusCode: 200, headers: headers, body: ‘’ };
+}
 
-let body;
-try { body = JSON.parse(event.body); } catch(e) { return { statusCode: 400, headers: h, body: ‘{“error”:“bad json”}’ }; }
+if (event.httpMethod !== ‘POST’) {
+return { statusCode: 405, headers: headers, body: ‘{“error”:“POST only”}’ };
+}
 
-const SYSTEMS = {
-dialin: ‘You are an expert specialty coffee barista and Q Grader. Be specific and concise. Give one clear next-shot recommendation with exact adjustments.’,
-bean: ‘You are a specialty coffee expert. Return ONLY valid JSON: {“found”:true,“name”:””,“roaster”:””,“origin”:””,“roastLevel”:“Medium”,“process”:“Washed”,“tasting”:””,“suggestedDose”:18,“suggestedYield”:36,“suggestedTemp”:93} or {“found”:false}. No markdown.’
+var key = process.env.ANTHROPIC_API_KEY;
+if (!key) {
+return { statusCode: 500, headers: headers, body: ‘{“error”:{“message”:“ANTHROPIC_API_KEY not set”}}’ };
+}
+
+var body;
+try {
+body = JSON.parse(event.body);
+} catch(e) {
+return { statusCode: 400, headers: headers, body: ‘{“error”:“bad json”}’ };
+}
+
+var systemPrompts = {
+dialin: ‘You are an expert specialty coffee barista and Q Grader. Be specific and concise. Give one clear next-shot recommendation with exact adjustments. No filler phrases.’,
+bean: ‘You are a specialty coffee expert. Return ONLY valid JSON with no markdown: {“found”:true,“name”:””,“roaster”:””,“origin”:””,“roastLevel”:“Medium”,“process”:“Washed”,“tasting”:””,“suggestedDose”:18,“suggestedYield”:36,“suggestedTemp”:93} or {“found”:false}.’
 };
 
-const payload = JSON.stringify({
+var payload = JSON.stringify({
 model: body.model || ‘claude-haiku-4-5-20251001’,
 max_tokens: body.max_tokens || 400,
-system: SYSTEMS[body.type] || body.system || ‘’,
+system: systemPrompts[body.type] || body.system || ‘’,
 messages: body.messages || []
 });
 
 try {
-const r = await fetch(‘https://api.anthropic.com/v1/messages’, {
+var response = await fetch(‘https://api.anthropic.com/v1/messages’, {
 method: ‘POST’,
 headers: {
 ‘Content-Type’: ‘application/json’,
@@ -35,9 +47,9 @@ headers: {
 },
 body: payload
 });
-const data = await r.json();
-return { statusCode: r.status, headers: h, body: JSON.stringify(data) };
-} catch(e) {
-return { statusCode: 500, headers: h, body: JSON.stringify({ error: { message: e.message } }) };
+var data = await response.json();
+return { statusCode: response.status, headers: headers, body: JSON.stringify(data) };
+} catch(err) {
+return { statusCode: 500, headers: headers, body: JSON.stringify({ error: { message: err.message } }) };
 }
 };
