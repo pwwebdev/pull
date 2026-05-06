@@ -3992,6 +3992,11 @@ function renderDW(){renderMorning();}
 
 
 // ─── STARTUP ──────────────────────────────────────────────
+// Wire tab buttons
+['log','stats','passport','settings','new'].forEach(function(t){
+  var btn=document.getElementById('tab-'+t);
+  if(btn)btn.addEventListener('click',function(){go(t);});
+});
 try{
   var _uP=typeof URLSearchParams!=='undefined'?new URLSearchParams(window.location.search):null;
   var _rP=_uP?_uP.get('recipe'):null;
